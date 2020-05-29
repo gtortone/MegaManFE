@@ -13,6 +13,8 @@ socket.connect ("tcp://lxconga01.na.infn.it:5000")
 
 eu = lib.evutils.EventUtils()
 eu.SetDebug(True)
+# number of samples per channel
+eu.SetSampleNum(5)
 
 chunk8 = array('B')
 event_raw = array('H')
@@ -34,7 +36,7 @@ while True:
 				del event_raw[:]
 				continue
 			print("---")
-			print("Event Counter: %X" % eu.EC(event_raw))
+			print("Event Counter: %X" % eu.getEC(event_raw))
 			eu.PrintTab(event_raw)
 			if (not eu.CheckEC(event_raw)):
 				print("E: skip event - EC error")
