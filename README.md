@@ -1,2 +1,3 @@
-# MegampFE
-Megamp Frontend for MIDAS
+# Megamp Manager FrontEnd
+
+Megamp Manager Frontend for MIDAS DAQ
