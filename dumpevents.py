@@ -4,66 +4,15 @@ import sys
 import struct
 import zmq
 from array import array
-
-debug = True
-
-def PrintTab(ev):
-    col = 0
-    for item in ev:
-        print('%X' % item, end='')
-        col = col + 1
-        if(col == 16):
-            col = 0
-            print('\n')
-        else:
-            print(' . ', end='')
-    print('\n')
-
-def PrintCol(ev):
-    for item in ev:
-        print('%X' % item)
-    print('\n')
-
-def EC(ev):
-	return (ev[1] & 0x0FFF)
-
-def CheckEC(ev):
-	ec = 0
-	for item in ev:
-		if( (item & 0xF000) == 0xC000 ):
-			readec = item & 0x0FFF
-			if(ec == 0):
-				ec = readec
-			else:
-				if(ec != readec):
-					if debug:
-						print("Event EC: %X != %X not consistent" % (ec, readec))
-					return False
-	return True
-
-def CheckCRC(ev):
-	evcrc = (ev[-1] & 0x00FF)
-	crc = 0
-	for item in ev[:-1]:
-		msb = (item & 0xFF00) >> 8
-		lsb = (item & 0x00FF)
-		crc = crc ^ msb ^ lsb
-	crc8 = crc & 0x00FF
-	if debug:
-		print("Event CRC: %X - Calculated CRC: %X" % (evcrc, crc8))
-	return (evcrc == crc8)
-
-def CheckLength(ev):
-	evlen = (ev[-2] & 0x0FFF)
-	length = len(ev) + 1
-	if debug:
-		print("Event LEN: %d - Calculated LEN: %d" % (evlen, length))
-	return (evlen == length)
+import lib.evutils
 
 context = zmq.Context()
 socket = context.socket(zmq.SUB)
 socket.subscribe("")
 socket.connect ("tcp://lxconga01.na.infn.it:5000")
+
+eu = lib.evutils.EventUtils()
+eu.SetDebug(True)
 
 chunk8 = array('B')
 event_raw = array('H')
@@ -85,13 +34,13 @@ while True:
 				del event_raw[:]
 				continue
 			print("---")
-			print("Event Counter: %X" % EC(event_raw))
-			PrintTab(event_raw)
-			if (not CheckEC(event_raw)):
+			print("Event Counter: %X" % eu.EC(event_raw))
+			eu.PrintTab(event_raw)
+			if (not eu.CheckEC(event_raw)):
 				print("E: skip event - EC error")
-			if (not CheckCRC(event_raw)):
+			if (not eu.CheckCRC(event_raw)):
 				print("E: skip event - CRC error")
-			if (not CheckLength(event_raw)):
+			if (not eu.CheckLength(event_raw)):
 				print("E: skip event - LEN error")
 			del event_raw[:]
 			print("---")
