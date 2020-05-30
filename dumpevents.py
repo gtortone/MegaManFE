@@ -36,7 +36,7 @@ while True:
 				del event_raw[:]
 				continue
 			print("---")
-			print("Event Counter: %X" % eu.getEC(event_raw))
+			print("Event Counter: %X" % eu.GetEC(event_raw))
 			eu.PrintTab(event_raw)
 			if (not eu.CheckEC(event_raw)):
 				print("E: skip event - EC error")

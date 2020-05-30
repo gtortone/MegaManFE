@@ -59,7 +59,7 @@ class EventUtils():
     def CheckEC(self, ev):
         ec = 0
         i = 1
-        readec = self.nnmaskEC(ev[i])
+        readec = self.UnmaskEC(ev[i])
         step = 2 + 32 + (32 * self.samplenum)
         while (i < len(ev)):
             if (self.UnmaskEC(ev[i]) != readec):
