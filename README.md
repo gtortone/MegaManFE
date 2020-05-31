@@ -137,3 +137,32 @@ Bank:M000
    - Events with LEN error
    - Events too short
    
+## Tools to inspect events
+
+### dumpevents.py
+
+dumpevents.py is a simple tool to capture events from ZeroMQ socket. It displays a raw dump of event in text mode and reports
+error conditions (EC mismatch, length/crc error).
+
+### mdump
+
+mdump is a MIDAS event dump utility that supports some parameters to filter event data. Event shown by mdump are organized
+with MIDAS event format.
+
+Example 1:
+```
+mdump
+```
+Dump a single event.
+
+Example 2:
+```
+mdump -l 10 -b M000
+```
+Dump 10 events (-l argument) but display only bank M000 (-b argument)
+
+Example 3:
+```
+mdump -f d
+```
+Dump a single event with decimal data representation (default: hexadecimal)
