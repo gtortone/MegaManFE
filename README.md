@@ -131,3 +131,11 @@ Bank:M000
  185-> 0x03fb 0x03fb 0x03fb 0x050c 0x050c 0x001f 0x06fe 0x06ff 
  193-> 0x06ff 0x06b6 0x06b6 
 ```
+### ODB records
+
+- /Equipment/MegampManager<index>/Settings/
+   - Events with EC non consistent
+   - Events with CRC error
+   - Events with LEN error
+   - Events too short
+   
