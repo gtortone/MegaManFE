@@ -85,14 +85,13 @@ Raw events collected by FrontEnd Megamp Manager are organized with MIDAS event f
 
 inside a bank data are organized as follow:
 
-(EC): Event Counter
-(NM): number of Megamp modules
-(NS): number of samples per channel
-(NC): number of channel
+(EC): Event Counter\
+(NM): number of Megamp modules\
+(NS): number of samples per channel\
+(NC): number of channel\
 (Sx): sample
-
 ```
-Bank:M000 Length: 390(I*1)/97(I*4)/195(Type) Type:Unsigned Integer*2
+Bank:M000
    1-> 0x0c32 0x0008 0x0005 0x0000 0x26e3 0x26e3 0x26e3 0x2f8d
         (EC)   (NM)   (NS)   (NC)   (S0)   (S1)   (S2)   (S3)
    9-> 0x2f8d 0x0001 0x3fff 0x3fff 0x3fff 0x3fff 0x3fff 0x0002
