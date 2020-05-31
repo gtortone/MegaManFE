@@ -46,7 +46,7 @@ zerorpc  --client --connect tcp://lxconga01.na.infn.it:4242 -j writereg 0 1
 
 ### Event publisher
 
-Event publisher send USB data on ZeroMQ publisher socket on TCP port 5000.
+Event publisher send USB data on ZeroMQ (https://zeromq.org/) publisher socket on TCP port 5000.
 
 USB endpoint involved for Event publisher is:
 
@@ -61,9 +61,23 @@ equipped with MIDAS libraries.
 
 ### Usage of feproxy.py
 
-To run Frontend Megamp Manager launch:
+To run FrontEnd Megamp Manager launch:
 ```
 ./femegaman.py -i <index>
 ```
 where `<index>` is the number of this MIDAS FrontEnd.
+
+### MIDAS Event data format
+
+Megamp Manager raw event has this specifications:
+
+- a Megamp Manager handles 8 Megamp boards
+- each Megamp board provides 32 channels
+- each Megamp channel provides from 1 to 15 samples (value suggested: 5)
+
+User can specify with RunControl registers:
+- number of Megamp boards
+- number of samples per channel
+
+Raw events collected by FrontEnd Megamp Manager are organized with MIDAS event format:
 
