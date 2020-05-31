@@ -14,6 +14,14 @@ FrontEnd USB proxy runs on Congatec board and is composed by:
 - RunControl RPC
 - Event publisher
 
+### Usage of feproxy.py
+
+To run FrontEnd USB proxy simple launch:
+```
+./feproxy.py
+```
+Note: a unique instance of feproxy.py is allowed to run on Congatec board due to exclusive access to USB bus.
+
 ### RunControl RPC
 
 RunControl RPC provides a mechanism of Run Control (get/set registers) by Remote Procedure Call mechanism.
@@ -46,13 +54,16 @@ USB endpoint involved for Event publisher is:
 
 USB data are sent on socket "as is" without any control due to provide reasonable performance on Congatec board.
 
+## Frontend Megamp Manager (femegaman.py)
+
+Frontend Megamp Manager is a MIDAS FrontEnd written in Python with MIDAS Python libraries. It runs on a server/workstation
+equipped with MIDAS libraries.
+
 ### Usage of feproxy.py
 
-To run FrontEnd USB proxy simple launch:
-
+To run Frontend Megamp Manager launch:
 ```
-./feproxy.py
+./femegaman.py -i <index>
 ```
-
-Note: a unique instance of feproxy.py is allowed to run on Congatec board due to exclusive access to USB bus.
+where `<index>` is the number of this MIDAS FrontEnd.
 
