@@ -82,15 +82,13 @@ User can specify with RunControl registers:
 Raw events collected by FrontEnd Megamp Manager are organized with MIDAS event format, each word is 16 bit:
 
 - Event data start with event header:
-
-Evid: event id - type of event
-Mask: trigger mask
-Serial: progressive number (provided by MIDAS)
-Time: UNIX timestamp (provided by MIDAS)
-
 ```
 Evid:0001- Mask:0000- Serial:639- Time:0x5ed38991
 ```
+Evid: event id - type of event\
+Mask: trigger mask\
+Serial: progressive number (provided by MIDAS)\
+Time: UNIX timestamp (provided by MIDAS)
 
 - Each Megamp board is a bank: M000, M001, ..., M008
 
