@@ -31,7 +31,7 @@ class EventUtils():
                 print('\n')
             else:
                 print(' . ', end='')
-            print('\n')
+        print('\n')
 
     def PrintCol(self, ev):
         for item in ev:
