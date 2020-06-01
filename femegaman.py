@@ -3,6 +3,7 @@
 import midas
 import midas.frontend
 import midas.event
+import sys
 import struct
 import zmq
 import lib.evutils
@@ -44,8 +45,7 @@ class MegampManagerEquipment(midas.frontend.EquipmentBase):
         self.set_status("Initialized", "yellowLight")
 
     def begin_of_run(self, run_number):
-        print("inside Equipment:begin_of_run")
-
+        # reset event error statistics
         self.settings["Events with EC non consistent"] = 0
         self.settings["Events with CRC error"] = 0
         self.settings["Events with LEN error"] = 0
@@ -53,7 +53,7 @@ class MegampManagerEquipment(midas.frontend.EquipmentBase):
         self.client.odb_set(self.odb_stats_base, self.settings)
 
     def end_of_run(self, run_number):
-        print("inside Equipment:end_of_run")
+        None
 
     def poll_func(self):
         string = self.socket.recv()
@@ -110,6 +110,10 @@ class MegampManagerEquipment(midas.frontend.EquipmentBase):
 class Frontend(midas.frontend.FrontendBase):
     def __init__(self):
         midas.frontend.FrontendBase.__init__(self, "MegaManFE")
+        if(midas.frontend.frontend_index == -1):
+            print("Error: please specify frontend index (-i argument)")
+            sys.exit(-1)
+
         self.equip_name = "MegampManager%s" % str(midas.frontend.frontend_index).zfill(2)
         self.mmeq = MegampManagerEquipment(self.client, self.equip_name)
         self.add_equipment(self.mmeq)
