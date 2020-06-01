@@ -59,7 +59,7 @@ USB data are sent on socket "as is" without any control due to provide reasonabl
 Frontend Megamp Manager is a MIDAS FrontEnd written in Python with MIDAS Python libraries. It runs on a server/workstation
 equipped with MIDAS libraries.
 
-### Usage of feproxy.py
+### Usage of femegaman.py
 
 To run FrontEnd Megamp Manager launch:
 ```
