@@ -131,8 +131,8 @@ Bank:M000
 ```
 ### ODB records
 
-- /Equipment/MegampManager<index>/Settings/
-   - Events with EC non consistent
+- /Equipment/MegampManager<index>/Counters/
+   - Events with EC not consistent
    - Events with CRC error
    - Events with LEN error
    - Events too short
