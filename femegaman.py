@@ -28,7 +28,6 @@ class MegampManagerEquipmentCtrl(midas.frontend.EquipmentBase):
         default_common.read_when = midas.RO_ALWAYS
         default_common.log_history = 1
 
-        self.client = client
         self.feindex = feindex
         equip_name_ctrl = equip_name + "-ctrl"
         self.odb_ctrl_base = "/Equipment/%s/Settings" % equip_name_ctrl
@@ -225,12 +224,11 @@ class Frontend(midas.frontend.FrontendBase):
                 str(midas.frontend.frontend_index).zfill(2)
         self.eqdata = MegampManagerEquipmentData(self.client, equip_name,
                                                  feindex)
-        self.add_equipment(self.eqdata)
-        equip_name = "MegampManager%s" % \
-                str(midas.frontend.frontend_index).zfill(2)
         self.eqctrl = MegampManagerEquipmentCtrl(self.client, equip_name,
                                                  feindex)
+        self.add_equipment(self.eqdata)
         self.add_equipment(self.eqctrl)
+
         if(self.run_state == midas.STATE_RUNNING):
             self.set_all_equipment_status("Running", "greenLight")
 
