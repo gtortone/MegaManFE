@@ -8,14 +8,56 @@ import struct
 import zmq
 import zerorpc
 import lib.evutils
+from lib.register import GetRegs, BOR, SOF, SCLR, SCAN
 from array import array
 
 ### params
 proxy_host = "lxconga01.na.infn.it"
 ###
 
+class MegampManagerEquipmentCtrl(midas.frontend.EquipmentBase):
+    def __init__(self, client, equip_name, feindex):
+
+        default_common = midas.frontend.InitialEquipmentCommon()
+        default_common.equip_type = midas.EQ_PERIODIC
+        default_common.buffer_name = "SYSTEM"
+        default_common.trigger_mask = 0
+        default_common.event_id = 100
+        default_common.period_ms = 2000
+        default_common.read_when = midas.RO_ALWAYS
+        default_common.log_history = 1
+
+        self.feindex = feindex
+
+        self.rpcclient = zerorpc.Client()
+        ep_ctrl = "tcp://%s:4242" % proxy_host
+        self.rpcclient.connect(ep_ctrl)
+
+        # initialize default settings
+        self.default_settings = {}
+        for item in GetRegs():
+            self.default_settings[item['label']] = 0
+
+        # read FPGA registers with SOF flag
+        for item in GetRegs(SOF):
+            value = self.rpcclient.readreg(item['address'])
+            self.default_settings[item['label']] = value
+
+        midas.frontend.EquipmentBase.__init__(self, client, equip_name, default_common, self.default_settings)
+
+        self.set_status("Initialized", "yellowLight")
+
+    def begin_of_run(self, run_number):
+        None
+
+    def end_of_run(self, run_number):
+        None
+
+    def readout_func(self):
+        None
+
 class MegampManagerEquipmentData(midas.frontend.EquipmentBase):
-    def __init__(self, client, equip_name):
+    def __init__(self, client, equip_name, feindex):
 
         default_common = midas.frontend.InitialEquipmentCommon()
         default_common.equip_type = midas.EQ_POLLED
@@ -26,15 +68,13 @@ class MegampManagerEquipmentData(midas.frontend.EquipmentBase):
         default_common.read_when = midas.RO_RUNNING
         default_common.log_history = 1
 
+        self.feindex = feindex
+
         self.context = zmq.Context()
         self.data_socket = self.context.socket(zmq.SUB)
         self.data_socket.subscribe("")
         ep_data = "tcp://%s:5000" % proxy_host
         self.data_socket.connect(ep_data)
-
-        self.rpcclient = zerorpc.Client()
-        ep_ctrl = "tcp://%s:4242" % proxy_host
-        self.rpcclient.connect(ep_ctrl)
 
         self.eu = lib.evutils.EventUtils()
         self.eu.SetDebug(False)
@@ -46,22 +86,18 @@ class MegampManagerEquipmentData(midas.frontend.EquipmentBase):
         self.buf = array('H')
         self.buflen = 0
 
-        self.default_settings = {"Number of samples per channel": 0}
-
         self.odb_stats_base = "/Equipment/%s/Counters" % equip_name
         self.stats_settings = {"Events with CRC error": 0, "Events with LEN error": 0, "Events too short": 0, "Events with EC not consistent": 0}
         client.odb_set(self.odb_stats_base, self.stats_settings)
 
-        midas.frontend.EquipmentBase.__init__(self, client, equip_name, default_common, self.default_settings)
+        midas.frontend.EquipmentBase.__init__(self, client, equip_name, default_common)
 
         self.set_status("Initialized", "yellowLight")
 
     def begin_of_run(self, run_number):
         # reset event error statistics
-        self.stats_settings["Events with EC not consistent"] = 0
-        self.stats_settings["Events with CRC error"] = 0
-        self.stats_settings["Events with LEN error"] = 0
-        self.stats_settings["Events too short"] = 0
+        for key in self.stats_settings.keys():
+            self.stats_settings[key] = 0
         self.client.odb_set(self.odb_stats_base, self.stats_settings)
 
     def end_of_run(self, run_number):
@@ -122,26 +158,34 @@ class MegampManagerEquipmentData(midas.frontend.EquipmentBase):
 class Frontend(midas.frontend.FrontendBase):
     def __init__(self):
         midas.frontend.FrontendBase.__init__(self, "MegaManFE")
-        if(midas.frontend.frontend_index == -1):
+        feindex = midas.frontend.frontend_index
+        if(feindex == -1):
             print("Error: please specify frontend index (-i argument)")
             sys.exit(-1)
 
-        self.equip_name = "MegampManager%s-data" % str(midas.frontend.frontend_index).zfill(2)
-        self.mmeq = MegampManagerEquipmentData(self.client, self.equip_name)
-        self.add_equipment(self.mmeq)
+        equip_name = "MegampManager%s-data" % str(midas.frontend.frontend_index).zfill(2)
+        self.eqdata = MegampManagerEquipmentData(self.client, equip_name,
+                                                 feindex)
+        self.add_equipment(self.eqdata)
+        equip_name = "MegampManager%s-ctrl" % str(midas.frontend.frontend_index).zfill(2)
+        self.eqctrl = MegampManagerEquipmentCtrl(self.client, equip_name,
+                                                 feindex)
+        self.add_equipment(self.eqctrl)
         if(self.run_state == midas.STATE_RUNNING):
             self.set_all_equipment_status("Running", "greenLight")
 
     def begin_of_run(self, run_number):
         self.set_all_equipment_status("Running", "greenLight")
         self.client.msg("Frontend has seen start of run number %d" % run_number)
-        self.mmeq.begin_of_run(run_number)
+        self.eqctrl.begin_of_run(run_number)
+        self.eqdata.begin_of_run(run_number)
         return midas.status_codes["SUCCESS"]
 
     def end_of_run(self, run_number):
         self.set_all_equipment_status("Finished", "greenLight")
         self.client.msg("Frontend has seen end of run number %d" % run_number)
-        self.mmeq.end_of_run(run_number)
+        self.eqctrl.end_of_run(run_number)
+        self.eqdata.end_of_run(run_number)
         return midas.status_codes["SUCCESS"]
 
 if __name__ == "__main__":
