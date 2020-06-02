@@ -93,7 +93,7 @@ class EventUtils():
         return (evlen == length)
 
     def GetChannelSamples(self, ev, m, ch):
-        k = 32 + 32*self.samplenum
-        start = (2*m + 6*ch + self.samplenum) + (k*m) - 1
+        offset = 4
+        start = m*(32+2+(self.samplenum*32)) + ch*(self.samplenum+1) + offset
         end = start + self.samplenum
         return(ev[start:end])
