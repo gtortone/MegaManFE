@@ -23,14 +23,18 @@ class EventUtils():
 
     def PrintTab(self, ev):
         col = 0
+        num = 0
+        print('%04d-> ' % num, end='')
         for item in ev:
-            print('%X' % item, end='')
+            num = num + 1
+            print('0x%04X' % item, end='')
             col = col + 1
             if(col == 16):
                 col = 0
                 print('\n')
+                print('%04d-> ' % num, end='')
             else:
-                print(' . ', end='')
+                print(' ', end='')
         print('\n')
 
     def PrintCol(self, ev):
@@ -91,5 +95,5 @@ class EventUtils():
     def GetChannelSamples(self, ev, m, ch):
         k = 32 + 32*self.samplenum
         start = (2*m + 6*ch + self.samplenum) + (k*m) - 1
-        end = start + self.samplenum 
+        end = start + self.samplenum
         return(ev[start:end])
