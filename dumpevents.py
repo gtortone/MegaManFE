@@ -3,18 +3,29 @@
 import sys
 import struct
 import zmq
+import zerorpc
 from array import array
 import lib.evutils
+
+### params
+proxy_host = "lxconga01.na.infn.it"
+###
 
 context = zmq.Context()
 socket = context.socket(zmq.SUB)
 socket.subscribe("")
-socket.connect ("tcp://lxconga01.na.infn.it:5000")
+socket.connect("tcp://%s:5000" % proxy_host)
+
+rpcclient = zerorpc.Client()
+ep_ctrl = "tcp://%s:4242" % proxy_host
+rpcclient.connect(ep_ctrl)
 
 eu = lib.evutils.EventUtils()
 eu.SetDebug(True)
+
 # number of samples per channel
-eu.SetSampleNum(5)
+snum = rpcclient.readreg(0x1B)
+eu.SetSampleNum(snum)
 
 chunk8 = array('B')
 event_raw = array('H')
@@ -26,7 +37,7 @@ while True:
 
 	for word in data16:
 		if(len(event_raw) > 60000):
-			print("E: skip event - length > 60000 words")	
+			print("E: skip event - length > 60000 words")
 			del event_raw[:]
 			continue
 		event_raw.append(word)
