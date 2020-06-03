@@ -11,6 +11,7 @@ import lib.evutils as evutils
 from lib.register import GetRegAddress, GetRegs,\
         GetCommitRegs, BOR, SOF, SCLR, SCAN
 from array import array
+from time import sleep
 
 ### params
 proxy_host = "lxconga01.na.infn.it"
@@ -225,12 +226,12 @@ class Frontend(midas.frontend.FrontendBase):
 
         equip_name = "MegampManager%s" % \
                 str(midas.frontend.frontend_index).zfill(2)
-        self.eqdata = MegampManagerEquipmentData(self.client, equip_name,
-                                                 feindex)
         self.eqctrl = MegampManagerEquipmentCtrl(self.client, equip_name,
                                                  feindex)
-        self.add_equipment(self.eqdata)
+        self.eqdata = MegampManagerEquipmentData(self.client, equip_name,
+                                                 feindex)
         self.add_equipment(self.eqctrl)
+        self.add_equipment(self.eqdata)
 
         if(self.run_state == midas.STATE_RUNNING):
             self.set_all_equipment_status("Running", "greenLight")
