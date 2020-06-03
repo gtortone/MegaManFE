@@ -6,7 +6,8 @@
 [Frontend Megamp Manager](#frontend-megamp-manager)\
 [MIDAS Event data format](#midas-event-data-format)\
 [Tools to inspect events](#tools-to-inspect-events)\
-[Run control](#run-control)
+[Run control](#run-control)\
+[ODB structure](#odb-structure)
 
 ## Introduction
 
@@ -142,14 +143,6 @@ Bank:M000
  193-> 0x0d7b 0x0e05 0x0e05 0x0d6a 0x0d6a 
 ```
 
-### ODB records
-
-- /Equipment/MegampManager\<index\>/Counters/
-   - Events with EC not consistent
-   - Events with CRC error
-   - Events with LEN error
-   - Events too short
-   
 ## Tools to inspect events
 
 ### dumpevents.py
@@ -201,3 +194,16 @@ registers with this flag will be read from FPGA and written to ODB at start of f
 registers with this flag will be read from ODB and written to ODB only when DAQ is STOPPED. User can use it through web interface and they will be automatically reset to 0.
 - **SCAN** (Scan)\
 registers with this flag are periodically (2 seconds frequency) read from FPGA and written to ODB in every DAQ state (RUNNING/STOPPED/PAUSED)
+
+## ODB structure
+
+- /Equipment/MegampManager\<index\>-data/Counters
+   - Events with EC not consistent
+   - Events with CRC error
+   - Events with LEN error
+   - Events too short
+   
+- /Equipment/MegampManager\<index\>-ctrl/Settings/Board
+   - FPGA registers for board hardware setup
+
+- 
