@@ -185,9 +185,9 @@ Label attribute contains Midas ODB record name related to this register\
 
 Flags are combination of following values:
 - **BOR** (Begin Of Run)\
-registers whith this will be read from ODB and written to FPGA at begin of each run 
+registers with this flag will be read from ODB and written to FPGA at begin of each run 
 - **SOF** (Start of Frontend)\
-registers with this will be read from FPGA and written to ODB at start of frontend code
+registers with this flag will be read from FPGA and written to ODB at start of frontend code
 - **SCLR** (Self-Clear)\
 registers with this flag will be read from ODB and written to ODB only when DAQ is STOPPED. User can use it through web interface and they will be automatically reset to 0.
 - **SCAN** (Scan)\
