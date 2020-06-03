@@ -180,7 +180,8 @@ Each FPGA register has following attributes:
 - address
 - flags
 
-Label attribute contains Midas ODB record name related to this register (e.g. /Equipment/MegampManager00-ctrl/Settings/Board/DAC offset)
+Label attribute contains Midas ODB record name related to this register\
+(e.g. _/Equipment/MegampManager00-ctrl/Settings/Board/DAC offset_)
 
 Flags are combination of following values:
 - **BOR** (Begin Of Run)\
