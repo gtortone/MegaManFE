@@ -105,8 +105,8 @@ Evid:0001- Mask:0000- Serial:639- Time:0x5ed38991
 inside a bank data are organized as follow:
 
 (EC): Event Counter\
-(TSH): MSW of 30-bit timestamp
-(TSL): LSW of 30-bit timestamp
+(TSH): MSW of 30-bit timestamp\
+(TSL): LSW of 30-bit timestamp\
 (NM): number of Megamp modules\
 (NS): number of samples per channel\
 (NC): number of channel\
