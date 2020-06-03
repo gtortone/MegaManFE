@@ -244,7 +244,7 @@ class Frontend(midas.frontend.FrontendBase):
         return midas.status_codes["SUCCESS"]
 
     def end_of_run(self, run_number):
-        self.set_all_equipment_status("Finished", "greenLight")
+        self.set_all_equipment_status("Finished", "yellowLight")
         self.client.msg("Frontend has seen end of run number %d" % \
                         run_number)
         self.eqctrl.end_of_run(run_number)
