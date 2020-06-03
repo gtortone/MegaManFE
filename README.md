@@ -170,3 +170,25 @@ Example 3:
 mdump -f d
 ```
 Dump a single event with decimal data representation (default: hexadecimal)
+
+## Slow Control
+
+Slow control is related to FPGA registers accessible through Frontend USB proxy and ZeroRPC.
+
+Each FPGA register has following attributes:
+- label
+- address
+- flags
+
+Label attribute contains Midas ODB record name related to this register (e.g. /Equipment/MegampManager00-ctrl/Settings/Board/DAC offset)
+
+Flags are combination of following values:
+- **BOR** (Begin Of Run)\
+registers whith this will be read from ODB and written to FPGA at begin of each run 
+- **SOF** (Start of Frontend)\
+registers with this will be read from FPGA and written to ODB at start of frontend code
+- **SCLR** (Self-Clear)\
+registers with this flag will be read from ODB and written to ODB only when DAQ is STOPPED. User can use it through web interface and they will be automatically reset to 0.
+- **SCAN** (Scan)\
+registers with this flag are periodically (2 seconds frequency) read from FPGA and written to ODB in every DAQ state (RUNNING/STOPPED/PAUSED)
+
