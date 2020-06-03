@@ -97,3 +97,11 @@ class EventUtils():
         start = m*(32+2+(self.samplenum*32)) + ch*(self.samplenum+1) + offset
         end = start + self.samplenum
         return(ev[start:end])
+
+    def GetTime(self, ev):
+        msb = ev[-4]
+        lsb = ev[-3]
+        msb = msb << 16
+        lsb = lsb << 1
+        time = (msb + lsb) >> 1
+        return time

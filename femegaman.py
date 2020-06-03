@@ -196,9 +196,12 @@ class MegampManagerEquipmentData(midas.frontend.EquipmentBase):
 
     def readout_func(self):
         event = midas.event.Event()
+        time = self.eu.GetTime(self.event_raw)
         for i in range(self.eu.GetModuleNum()):
             chdata = []
             chdata.append(self.eu.GetEC(self.event_raw))
+            chdata.append((time & 0xFFFF0000) >> 16)
+            chdata.append((time & 0x0000FFFF))
             chdata.append(self.eu.GetModuleNum())
             chdata.append(self.eu.GetSampleNum())
             bankname = "M" + str(i).zfill(3)
