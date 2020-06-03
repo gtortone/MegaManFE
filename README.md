@@ -1,5 +1,15 @@
 # Megamp Manager FrontEnd for MIDAS DAQ
 
+## Index
+
+[Frontend USB proxy](#frontend-usb-proxy)\
+[Frontend Megamp Manager](#frontend-megamp-manager)\
+[MIDAS Event data format](#midas-event-data-format)\
+[Tools to inspect events](#tools-to-inspect-events)\
+[Run control](#run-control)
+
+## Introduction
+
 This MIDAS frontend collects events from Megamp Manager board then through MIDAS flow data are stored in MIDAS event files.
 
 Megamp Manager frontend is composed by two parts:
@@ -7,9 +17,9 @@ Megamp Manager frontend is composed by two parts:
 - FrontEnd USB proxy
 - Frontend Megamp Manager
 
-## FrontEnd USB proxy (feproxy.py)
+## FrontEnd USB proxy
 
-FrontEnd USB proxy runs on Congatec board and is composed by:
+FrontEnd USB proxy (feproxy.py) runs on Congatec board and is composed by:
 
 - RunControl RPC
 - Event publisher
@@ -54,10 +64,9 @@ USB endpoint involved for Event publisher is:
 
 USB data are sent on socket "as is" without any control due to provide reasonable performance on Congatec board.
 
-## Frontend Megamp Manager (femegaman.py)
+## Frontend Megamp Manager
 
-Frontend Megamp Manager is a MIDAS FrontEnd written in Python with MIDAS Python libraries. It runs on a server/workstation
-equipped with MIDAS libraries.
+Frontend Megamp Manager (femegaman.py) is a MIDAS FrontEnd written in Python with MIDAS Python libraries. It runs on a server/workstation equipped with MIDAS libraries.
 
 ### Usage of femegaman.py
 
