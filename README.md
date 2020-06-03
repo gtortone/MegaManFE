@@ -171,9 +171,9 @@ mdump -f d
 ```
 Dump a single event with decimal data representation (default: hexadecimal)
 
-## Slow Control
+## Run Control
 
-Slow control is related to FPGA registers accessible through Frontend USB proxy and ZeroRPC.
+Run control is related to FPGA registers of Megamp Manager accessible through Frontend USB proxy and ZeroRPC.
 
 Each FPGA register has following attributes:
 - label
@@ -192,4 +192,3 @@ registers with this flag will be read from FPGA and written to ODB at start of f
 registers with this flag will be read from ODB and written to ODB only when DAQ is STOPPED. User can use it through web interface and they will be automatically reset to 0.
 - **SCAN** (Scan)\
 registers with this flag are periodically (2 seconds frequency) read from FPGA and written to ODB in every DAQ state (RUNNING/STOPPED/PAUSED)
-
