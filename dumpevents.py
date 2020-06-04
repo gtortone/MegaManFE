@@ -2,6 +2,7 @@
 
 import sys
 import struct
+import time
 import zmq
 import zerorpc
 from array import array
@@ -30,6 +31,11 @@ eu.SetSampleNum(snum)
 chunk8 = array('B')
 event_raw = array('H')
 
+nevents = 0
+totevents = 0
+ts_prev = time.time()
+fevents = 0
+printrate = False
 while True:
     string = socket.recv()
     count = len(string) // 2
@@ -42,6 +48,15 @@ while True:
             continue
         event_raw.append(word)
         if( (word & 0xF000) == 0xF000):      # end of event
+            totevents += 1
+            nevents += 1
+            ts_now = time.time()
+            ts_diff = ts_now - ts_prev
+            if(ts_diff > 5):
+                fevents = nevents/ts_diff
+                nevents = 0
+                ts_prev = ts_now
+                printrate = True
             if(len(event_raw) < 3):
                 print("E: skip event - length < 3 words")
                 del event_raw[:]
@@ -56,5 +71,9 @@ while True:
             if (not eu.CheckLength(event_raw)):
                 print("E: skip event - LEN error")
             print("Timestamp: %d" % eu.GetTime(event_raw))
+            print("Number of events: %d" % totevents)
+            if(printrate):
+                print("Rate of events: %d ev/s" % round(fevents))
+                printrate = False
             del event_raw[:]
             print("---")
