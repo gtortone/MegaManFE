@@ -18,25 +18,29 @@ class MegampManagerEquipmentCtrl(midas.frontend.EquipmentBase):
 
         self.feindex = feindex
         equip_name_ctrl = equip_name + "-ctrl"
-        self.odb_ctrl_base = "/Equipment/%s/Settings" % equip_name_ctrl
+        self.odb_base = "/Equipment/%s" % equip_name_ctrl
 
         self.rpcclient = zerorpc.Client()
         ep_ctrl = "tcp://%s:4242" % proxy['hostname']
         self.rpcclient.connect(ep_ctrl)
 
-        # initialize default settings
-        self.default_settings = {}
+        # initialize ODB
+        self.odb_tree = {}
         for item in GetRegs():
-            self.default_settings[item['label']] = 0
+            self.odb_tree[item['label']] = 0
 
         # read FPGA registers with SOF flag - write to ODB
         for item in GetRegs(SOF):
             value = self.rpcclient.readreg(item['address'])
-            self.default_settings[item['label']] = value
+            self.odb_tree[item['label']] = value
+
+        client.odb_set(self.odb_base, self.odb_tree,
+                       update_structure_only=True)
+
+        client.communicate(10)
 
         midas.frontend.EquipmentBase.__init__(self, client, equip_name_ctrl,
-                                              default_common,
-                                              self.default_settings)
+                                              default_common)
 
         self.set_status("Initialized", "yellowLight")
 
@@ -44,7 +48,7 @@ class MegampManagerEquipmentCtrl(midas.frontend.EquipmentBase):
         # read from ODB - write to FPGA registers with BOR
         for item in GetRegs(BOR):
             addr = item['address']
-            value = self.client.odb_get(self.odb_ctrl_base + "/%s" %
+            value = self.client.odb_get(self.odb_base + "/%s" %
                                         item['label'])
             self.rpcclient.writereg(addr, value)
         # commit register
@@ -59,15 +63,14 @@ class MegampManagerEquipmentCtrl(midas.frontend.EquipmentBase):
         # read FPGA registers with SCAN flag - write to ODB
         for item in GetRegs(SCAN):
             value = self.rpcclient.readreg(item['address'])
-            self.default_settings[item['label']] = value
-            self.client.odb_set(self.odb_ctrl_base + "/%s" \
-                                % item['label'], value)
+            self.odb_tree[item['label']] = value
+            self.client.odb_set(self.odb_base + "/%s" % item['label'], value)
 
         # check SCLR registers: if value is 1 set again to 0
         # and set FPGA register
         state = self.client.odb_get("/Runinfo/State")
         for item in GetRegs(SCLR):
-                value = self.client.odb_get(self.odb_ctrl_base + "/%s" % \
+                value = self.client.odb_get(self.odb_base + "/%s" % \
                                 item['label'])
                 if (value != 0):
                     if (state != midas.STATE_RUNNING):
@@ -77,7 +80,7 @@ class MegampManagerEquipmentCtrl(midas.frontend.EquipmentBase):
                     else:
                         self.client.msg("Register not available in running mode",
                                         is_error=True)
-                    self.client.odb_set(self.odb_ctrl_base + "/%s" % \
+                    self.client.odb_set(self.odb_base + "/%s" % \
                                         item['label'], 0)
 
         self.client.communicate(10)

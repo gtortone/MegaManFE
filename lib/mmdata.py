@@ -54,7 +54,7 @@ class MegampManagerEquipmentData(midas.frontend.EquipmentBase):
         self.eu.SetModuleNum(8)
         #
         snum = self.client.odb_get(
-            "/Equipment/%s/Settings/Board/Number of samples per channel" %\
+            "/Equipment/%s/Settings/Number of samples per channel" %\
             (self.equip_name + "-ctrl"))
         self.eu.SetSampleNum(snum)
         self.eu.SetDebug(False)
