@@ -9,7 +9,7 @@ feproxy:  $(LIB) feproxy.o
 	$(CXX) $(CFLAGS) -o feproxy feproxy.o $(LIBS)
 	strip feproxy 
 
-feproxy.o:	feproxy.cpp
+feproxy.o:	feproxy.cxx
 	$(CXX) $(CFLAGS) -c $< -o $@
 
 clean:

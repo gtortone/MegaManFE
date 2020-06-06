@@ -53,23 +53,22 @@ INT trigger_thread(void *param);
 /*-- Equipment list ------------------------------------------------*/
 
 EQUIPMENT equipment[] = {
-
    {"MegampManager00-data",  /* equipment name */
-    {1, 0,                   /* event ID, trigger mask */
-     "SYSTEM",               /* event buffer */
-     EQ_USER,                /* equipment type */
-     0,                      /* event source (not used) */
-     "MIDAS",                /* format */
-     TRUE,                   /* enabled */
-     RO_RUNNING,             /* read only when running */
-     500,                    /* poll for 500ms */
-     0,                      /* stop run after this event limit */
-     0,                      /* number of sub events */
-     0,                      /* don't log history */
-     "", "", "",},
-    NULL,                    /* readout routine */
-    },
-
+      {  
+         1, 0,                   /* event ID, trigger mask */
+         "SYSTEM",               /* event buffer */
+         EQ_USER,                /* equipment type */
+         0,                      /* event source (not used) */
+         "MIDAS",                /* format */
+         TRUE,                   /* enabled */
+         RO_RUNNING,             /* read only when running */
+         500,                    /* poll for 500ms */
+         0,                      /* stop run after this event limit */
+         0,                      /* number of sub events */
+         0,                      /* don't log history */
+         "", "", "",},
+         NULL,                    /* readout routine */
+      },
    {""}
 };
 
@@ -207,12 +206,12 @@ INT trigger_thread(void *param)
          if (!is_readout_thread_enabled())
             break;
 
-	 zmq::message_t message{};
-	 s.recv(message, zmq::recv_flags::none);
+	      zmq::message_t message{};
+	      s.recv(message, zmq::recv_flags::none);
 
-	 RawEvent event_raw(reinterpret_cast<unsigned short int*>(message.data()), message.size()/2);
+	      RawEvent event_raw(reinterpret_cast<unsigned short int*>(message.data()), message.size()/2);
 
-	 // check event: size too short, EC mismatch, LEN error, CRC error
+	      // check event: size too short, EC mismatch, LEN error, CRC error
 
          bm_compose_event(pevent, 1, 0, 0, equipment[0].serial_number++);
          pdata = (WORD *)(pevent + 1);
@@ -221,25 +220,25 @@ INT trigger_thread(void *param)
          bk_init(pdata);
          
          // create a bank for each Megamp and fill each bank with channels and samples
-	 unsigned int time = GetTime(event_raw);
-	 for(int m=0; m<nmod; m++) {
-	    std::stringstream bankname; 
-	    bankname << "M00" << m;
-	    bk_create(pdata, bankname.str().c_str(), TID_WORD, (void **)&pmegamp);
-	    *pmegamp++ = GetEC(event_raw);
+	      unsigned int time = GetTime(event_raw);
+	      for(int m=0; m<nmod; m++) {
+	         std::stringstream bankname; 
+	         bankname << "M00" << m;
+	         bk_create(pdata, bankname.str().c_str(), TID_WORD, (void **)&pmegamp);
+	         *pmegamp++ = GetEC(event_raw);
 
-	    *pmegamp++ = (time & 0xFFFF0000) >> 16;
-	    *pmegamp++ = (time & 0x0000FFFF);
-	    *pmegamp++ = nmod;
-	    *pmegamp++ = nsam;
-	    for(int c=0; c<16; c++) {
-	       *pmegamp++ = c;
-	       std::vector<unsigned short int> chdata = GetChannelSamples(event_raw, m, c, nsam);
-	       std::copy(begin(chdata), end(chdata), pmegamp);
-	       pmegamp += chdata.size();
-	    }
-	    bk_close(pdata, pmegamp);
-	 }
+	         *pmegamp++ = (time & 0xFFFF0000) >> 16;
+	         *pmegamp++ = (time & 0x0000FFFF);
+	         *pmegamp++ = nmod;
+	         *pmegamp++ = nsam;
+	         for(int c=0; c<16; c++) {
+	            *pmegamp++ = c;
+	            std::vector<unsigned short int> chdata = GetChannelSamples(event_raw, m, c, nsam);
+	            std::copy(begin(chdata), end(chdata), pmegamp);
+	            pmegamp += chdata.size();
+	         }
+	         bk_close(pdata, pmegamp);
+	      }  // end for
 
          pevent->data_size = bk_size(pdata);
          

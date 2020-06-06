@@ -34,11 +34,11 @@ void *usb_events_thread(void *);
 
 /* USB callback ----------------------------------------------------*/
 
-void cb_daq_in(struct libusb_transfer *transfer)
-{
+void cb_daq_in(struct libusb_transfer *transfer) {
+
 	if(transfer->status == LIBUSB_TRANSFER_TIMED_OUT) {
 
-		// submit the next transfer
+      // submit the next transfer
 		libusb_submit_transfer(transfer_daq_in);
 		//printf("E: LIBUSB_TRANSFER_TIMED_OUT\n");
 
@@ -71,8 +71,8 @@ void cb_daq_in(struct libusb_transfer *transfer)
 	}
 }
 
-void *usb_events_thread(void *arg)
-{
+void *usb_events_thread(void *arg) {
+
 	struct timeval tv;
 	tv.tv_sec = 0;
 	tv.tv_usec = 100000;
@@ -90,8 +90,7 @@ void *usb_events_thread(void *arg)
    return NULL;
 }
 
-int usb_close()
-{
+int usb_close() {
 	libusb_close(devh);
 	libusb_exit(NULL);
 
@@ -102,15 +101,15 @@ int main(void) {
 
 	zmq::context_t context(1);
 	zmq::socket_t publisher(context, ZMQ_PUB);
-   	int r;
+   int r;
 
 	publisher.bind("tcp://0.0.0.0:5000");
 
 	r = libusb_init(NULL);
 	if(r < 0) {
-		printf("failed to initialise libusb");
+	   printf("failed to initialise libusb");
 		return(-1);
-   	}
+   }
 
 	devh = libusb_open_device_with_vid_pid(ctx, USB_VENDOR_ID, USB_PRODUCT_ID);
 	if (!devh) {
