@@ -1,6 +1,6 @@
 
 CXX = g++
-CFLAGS = -O3 -Wall -I$(INC_DIR) -std=c++11
+CFLAGS = -O3 -Wall -std=c++11
 LIBS = -lm -lutil -lpthread -lrt -lusb-1.0 -lzmq
 
 all: feproxy 

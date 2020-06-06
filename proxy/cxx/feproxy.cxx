@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <libusb-1.0/libusb.h>
 #include <zmq.hpp>
+#include <vector>
 
 //#define DEBUG
 //#define DEBUG_MORE
@@ -12,6 +13,10 @@
 #define USB_TIMEOUT		500
 #define EP_DAQRD     	(0x08 | LIBUSB_ENDPOINT_IN)
 #define LEN_IN_BUFFER	1024*8
+
+#define MAX_EVENT_SIZE	16000
+#define SOE_WORD		0xD000
+#define EOE_MASK		0xF000
 
 libusb_device_handle *devh = NULL;
 uint8_t in_buffer[LEN_IN_BUFFER];
@@ -25,8 +30,6 @@ bool cancel_done = false;
 pthread_t tid;
 pthread_mutex_t mutex;
 
-#define SOE	0xD000
-
 /*-- Function declarations -----------------------------------------*/
 
 int usb_close();
@@ -35,6 +38,12 @@ void *usb_events_thread(void *);
 /* USB callback ----------------------------------------------------*/
 
 void cb_daq_in(struct libusb_transfer *transfer) {
+
+	static std::vector<unsigned short int> chunk;
+	unsigned short int *bufusint;
+	unsigned short int value;
+
+	chunk.reserve(MAX_EVENT_SIZE);
 
 	if(transfer->status == LIBUSB_TRANSFER_TIMED_OUT) {
 
@@ -52,9 +61,28 @@ void cb_daq_in(struct libusb_transfer *transfer) {
 		// submit the next transfer
 		libusb_submit_transfer(transfer_daq_in);
 
-		zmq::socket_t *publisher = (zmq::socket_t *) transfer->user_data;
-		//printf("length: %d - actual_length %d\n", transfer->length, transfer->actual_length);
-		publisher->send(transfer->buffer, transfer->actual_length);
+		bufusint = reinterpret_cast<unsigned short int*>(transfer->buffer);
+		long int evlen = ((transfer->actual_length/2 * 2) == transfer->actual_length)?transfer->actual_length/2:transfer->actual_length/2 + 1;
+
+		for (long int i=0; i < evlen; i++) {
+			value = bufusint[i];
+			chunk.push_back(value);
+
+			if((value & 0xF000) == EOE_MASK) {
+
+				zmq::socket_t *publisher = (zmq::socket_t *) transfer->user_data;
+				char *blob_data = reinterpret_cast<char *>(chunk.data());
+				long int blob_size = chunk.size() * 2;
+				publisher->send(blob_data, blob_size);
+
+				chunk.clear();
+			}
+		}	// end for
+
+		if(chunk.size() >= MAX_EVENT_SIZE) {
+
+			chunk.clear();
+		}
 
 #ifdef DEBUG_MORE
 		unsigned short int *bufusint;
@@ -100,8 +128,8 @@ int usb_close() {
 int main(void) {
 
 	zmq::context_t context(1);
-	zmq::socket_t publisher(context, ZMQ_PUB);
-   int r;
+	zmq::socket_t publisher(context, ZMQ_PUSH);
+   	int r;
 
 	publisher.bind("tcp://0.0.0.0:5000");
 
