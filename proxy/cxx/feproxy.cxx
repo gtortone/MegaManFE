@@ -128,7 +128,7 @@ int usb_close() {
 int main(void) {
 
 	zmq::context_t context(1);
-	zmq::socket_t publisher(context, ZMQ_PUSH);
+	zmq::socket_t publisher(context, ZMQ_PUB);
    	int r;
 
 	publisher.bind("tcp://0.0.0.0:5000");
