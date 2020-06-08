@@ -52,6 +52,7 @@ zmq::context_t context(1);
 
 /*-- Function declarations -----------------------------------------*/
 
+INT proxy_thread(void *param);
 INT trigger_thread(void *param);
 
 /*-- Equipment list ------------------------------------------------*/
@@ -76,6 +77,24 @@ EQUIPMENT equipment[] = {
    {""}
 };
 
+/* ZMQ proxy thread: frontend(SUB) - backend(PUSH) */
+
+INT proxy_thread(void *param) {
+
+   zmq::socket_t frontend(context, zmq::socket_type::sub);
+   frontend.connect("tcp://lxconga01.na.infn.it:5000");
+   frontend.setsockopt(ZMQ_SUBSCRIBE, "", 0);
+
+   zmq::socket_t backend(context, zmq::socket_type::push);
+   backend.bind("inproc://events");
+
+   zmq_proxy(frontend, backend, NULL);
+
+   printf("Run ZMQ proxy...\n");
+
+   return 0;
+}
+
 /*-- Frontend Init -------------------------------------------------*/
 
 INT frontend_init()
@@ -88,6 +107,9 @@ INT frontend_init()
       cm_disconnect_experiment();
       exit(-1);
    }
+
+   /* create ZMQ proxy thread */
+   ss_thread_create(proxy_thread, NULL);
 
    for (int i=0; i<NUM_THREADS; i++) {
       
@@ -194,7 +216,7 @@ INT trigger_thread(void *param)
    struct _pdata *tdata = (struct _pdata *) param;
 
    zmq::socket_t s(context, zmq::socket_type::pull);
-   s.connect("tcp://lxconga01.na.infn.it:5000");
+   s.connect("inproc://events");
 
    /* index of this thread */
    index = (int)tdata->index;
