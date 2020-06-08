@@ -1,4 +1,4 @@
-//#include <stdio.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <zmq.hpp>
 #include <iostream>
@@ -34,12 +34,16 @@ INT max_event_size_frag = 5 * 1024 * 1024;
 /* buffer size to hold events */
 INT event_buffer_size = 100 * 10000;
 
+/* number of Megamp modules */
+unsigned short int nmod = 8;
+
+/* number of samples per channel */
+unsigned short int nsam = 5;
+
 #define NUM_THREADS	4
 
 struct _pdata {
    int index;
-   unsigned short int nmod;
-   unsigned short int nsam;
 };
 
 struct _pdata pdata[NUM_THREADS];
@@ -53,7 +57,7 @@ INT trigger_thread(void *param);
 /*-- Equipment list ------------------------------------------------*/
 
 EQUIPMENT equipment[] = {
-   {"MegampManager00-data",  /* equipment name */
+   {"MegampManager%02d-data",  /* equipment name */
       {  
          1, 0,                   /* event ID, trigger mask */
          "SYSTEM",               /* event buffer */
@@ -76,22 +80,30 @@ EQUIPMENT equipment[] = {
 
 INT frontend_init()
 {
-   /* for this demo, use two readout threads */
-   for (int i=0 ; i<NUM_THREADS ; i++) {
+   int feindex = get_frontend_index();
+
+   printf("\n");
+   if(feindex == -1) {
+      printf("E: please specify frontend index\n");
+      cm_disconnect_experiment();
+      exit(-1);
+   }
+
+   for (int i=0; i<NUM_THREADS; i++) {
       
       pdata[i].index = i;
-      // read from ODB...
-      pdata[i].nmod = 8;
-      pdata[i].nsam = 5;
-      //
 
       /* create a ring buffer for each thread */
       create_event_rb(i);
-      
+
       /* create readout thread */
       ss_thread_create(trigger_thread, &pdata[i]);
    }
-   
+
+   set_equipment_status(equipment[0].name, "Initialized", "#ffff00");
+   if(run_state == STATE_RUNNING)
+      set_equipment_status(equipment[0].name, "Started run", "#00ff00");
+
    return SUCCESS;
 }
 
@@ -99,6 +111,8 @@ INT frontend_init()
 
 INT frontend_exit()
 {
+   stop_readout_threads();
+
    return SUCCESS;
 }
 
@@ -106,6 +120,13 @@ INT frontend_exit()
 
 INT begin_of_run(INT run_number, char *error)
 {
+   // read from ODB...
+   nmod = 8;
+   nsam = 5;
+   //
+      
+   set_equipment_status(equipment[0].name, "Started run", "#00ff00");
+
    return SUCCESS;
 }
 
@@ -113,6 +134,8 @@ INT begin_of_run(INT run_number, char *error)
 
 INT end_of_run(INT run_number, char *error)
 {
+   set_equipment_status(equipment[0].name, "Ended run", "#00ff00");
+
    return SUCCESS;
 }
 
@@ -120,6 +143,8 @@ INT end_of_run(INT run_number, char *error)
 
 INT pause_run(INT run_number, char *error)
 {
+   set_equipment_status(equipment[0].name, "Paused run", "#ffff00");
+
    return SUCCESS;
 }
 
@@ -127,6 +152,8 @@ INT pause_run(INT run_number, char *error)
 
 INT resume_run(INT run_number, char *error)
 {
+   set_equipment_status(equipment[0].name, "Started run", "#00ff00");
+
    return SUCCESS;
 }
 
@@ -162,7 +189,6 @@ INT trigger_thread(void *param)
    EVENT_HEADER *pevent;
    WORD *pdata, *pmegamp;
    int  index, status;
-   unsigned short int nmod, nsam;
    INT rbh;
 
    struct _pdata *tdata = (struct _pdata *) param;
@@ -172,10 +198,6 @@ INT trigger_thread(void *param)
 
    /* index of this thread */
    index = (int)tdata->index;
-   /* number of Megamp modules */
-   nmod = (unsigned short int)tdata->nmod;
-   /* number of samples per channel */
-   nsam = (unsigned short int)tdata->nsam;
 
    /* tell framework that we are alive */
    signal_readout_thread_active(index, TRUE);
@@ -185,66 +207,75 @@ INT trigger_thread(void *param)
    
    /* Obtain ring buffer for inter-thread data exchange */
    rbh = get_event_rbh(index);
-   
+   printf("Thread %d - rbh = %d\n", index, rbh);
+
    while (is_readout_thread_enabled()) {
-      
-      /* obtain buffer space */
-      status = rb_get_wp(rbh, (void **)&pevent, 0);
-      if (!is_readout_thread_enabled())
-         break;
-      if (status == DB_TIMEOUT) {
-         ss_sleep(10);
-         continue;
-      }
-      if (status != DB_SUCCESS)
-         break;
-      
-      /* check for new event (poll) */
-      
-      if (status) { // if event available, read it out
-         
+
+      if(run_state == STATE_RUNNING) {
+
+         /* obtain buffer space */
+         status = rb_get_wp(rbh, (void **)&pevent, 0);
          if (!is_readout_thread_enabled())
             break;
-
-	      zmq::message_t message{};
-	      s.recv(message, zmq::recv_flags::none);
-
-	      RawEvent event_raw(reinterpret_cast<unsigned short int*>(message.data()), message.size()/2);
-
-	      // check event: size too short, EC mismatch, LEN error, CRC error
-
-         bm_compose_event(pevent, 1, 0, 0, equipment[0].serial_number++);
-         pdata = (WORD *)(pevent + 1);
+         if (status == DB_TIMEOUT) {
+            ss_sleep(10);
+            continue;
+         }
+         if (status != DB_SUCCESS)
+            break;
          
-         /* init bank structure */
-         bk_init(pdata);
+         /* check for new event (poll) */
          
-         // create a bank for each Megamp and fill each bank with channels and samples
-	      unsigned int time = GetTime(event_raw);
-	      for(int m=0; m<nmod; m++) {
-	         std::stringstream bankname; 
-	         bankname << "M00" << m;
-	         bk_create(pdata, bankname.str().c_str(), TID_WORD, (void **)&pmegamp);
-	         *pmegamp++ = GetEC(event_raw);
+         if (status) { // if event available, read it out
+            
+            if (!is_readout_thread_enabled())
+               break;
 
-	         *pmegamp++ = (time & 0xFFFF0000) >> 16;
-	         *pmegamp++ = (time & 0x0000FFFF);
-	         *pmegamp++ = nmod;
-	         *pmegamp++ = nsam;
-	         for(int c=0; c<16; c++) {
-	            *pmegamp++ = c;
-	            std::vector<unsigned short int> chdata = GetChannelSamples(event_raw, m, c, nsam);
-	            std::copy(begin(chdata), end(chdata), pmegamp);
-	            pmegamp += chdata.size();
-	         }
-	         bk_close(pdata, pmegamp);
-	      }  // end for
+            zmq::message_t message{};
+            s.recv(message, zmq::recv_flags::none);
 
-         pevent->data_size = bk_size(pdata);
+            RawEvent event_raw(reinterpret_cast<unsigned short int*>(message.data()), message.size()/2);
+
+            // check event: size too short, EC mismatch, LEN error, CRC error
+
+            bm_compose_event(pevent, 1, 0, 0, equipment[0].serial_number++);
+            pdata = (WORD *)(pevent + 1);
+            
+            /* init bank structure */
+            bk_init(pdata);
+            
+            // create a bank for each Megamp and fill each bank with channels and samples
+            unsigned int time = GetTime(event_raw);
+            for(int m=0; m<nmod; m++) {
+               std::stringstream bankname; 
+               bankname << "M00" << m;
+               bk_create(pdata, bankname.str().c_str(), TID_WORD, (void **)&pmegamp);
+               *pmegamp++ = GetEC(event_raw);
+
+               *pmegamp++ = (time & 0xFFFF0000) >> 16;
+               *pmegamp++ = (time & 0x0000FFFF);
+               *pmegamp++ = nmod;
+               *pmegamp++ = nsam;
+               for(int c=0; c<16; c++) {
+                  *pmegamp++ = c;
+                  std::vector<unsigned short int> chdata = GetChannelSamples(event_raw, m, c, nsam);
+                  std::copy(begin(chdata), end(chdata), pmegamp);
+                  pmegamp += chdata.size();
+               }
+               bk_close(pdata, pmegamp);
+            }  // end for
+
+            pevent->data_size = bk_size(pdata);
+            
+            /* send event to ring buffer */
+            rb_increment_wp(rbh, sizeof(EVENT_HEADER) + pevent->data_size);
+         }
+      } else {
          
-         /* send event to ring buffer */
-         rb_increment_wp(rbh, sizeof(EVENT_HEADER) + pevent->data_size);
-      }
+         // sleep to relax CPU usage
+         sleep(1);
+
+      } // end if run_state
    }
    
    /* tell framework that we are finished */
