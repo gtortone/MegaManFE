@@ -19,8 +19,8 @@ UFE = femegaman
 
 all: $(UFE)
 
-$(UFE): $(LIB) $(LIB_DIR)/mfe.o $(UFE).o evutils.o
-	$(CXX) $(CFLAGS) $(OSFLAGS) -o $(UFE) $(UFE).o $(LIB_DIR)/mfe.o evutils.o $(LIB) $(LIBS)
+$(UFE): $(LIB) $(LIB_DIR)/mfe.o $(UFE).o evutils.o register.o
+	$(CXX) $(CFLAGS) $(OSFLAGS) -o $(UFE) $(UFE).o $(LIB_DIR)/mfe.o evutils.o register.o $(LIB) $(LIBS)
 	strip $(UFE)
 
 %.o: %.cxx

@@ -9,6 +9,7 @@
 #include "msystem.h"
 #include "mfe.h"
 #include "evutils.h"
+#include "register.h"
 
 //#define DEBUG
 
@@ -52,13 +53,18 @@ zmq::context_t context(1);
 
 /*-- Function declarations -----------------------------------------*/
 
-INT proxy_thread(void *param);
-INT trigger_thread(void *param);
+INT proxy_thread(void *);
+INT trigger_thread(void *);
+INT handle_runcontrol(char *, INT);
+void equip_data_init(void);
+void equip_data_begin_of_run(void);
+void equip_ctrl_init(void);
+void equip_ctrl_begin_of_run(void);
 
 /*-- Equipment list ------------------------------------------------*/
 
 EQUIPMENT equipment[] = {
-   {"MegampManager%02d-data",  /* equipment name */
+      {"MegampManager%02d-data",  /* equipment name */
       {  
          1, 0,                   /* event ID, trigger mask */
          "SYSTEM",               /* event buffer */
@@ -72,9 +78,25 @@ EQUIPMENT equipment[] = {
          0,                      /* number of sub events */
          0,                      /* don't log history */
          "", "", "",},
-         NULL,                    /* readout routine */
+         NULL,                   /* readout routine */
       },
-   {""}
+      {"MegampManager%02d-ctrl",    /* equipment name */
+      {  
+         100, 0,                /* event ID, trigger mask */
+         "SYSTEM",               /* event buffer */
+         EQ_PERIODIC,            /* equipment type */
+         0,                      /* event source (not used) */
+         "MIDAS",                /* format */
+         TRUE,                   /* enabled */
+         RO_ALWAYS,              /* read always */
+         200,                   /* poll for 2000ms */
+         0,                      /* stop run after this event limit */
+         0,                      /* number of sub events */
+         1,                      /* log history */
+         "", "", "",},
+         handle_runcontrol,      /* readout routine */
+      },
+    {""}
 };
 
 /* ZMQ proxy thread: frontend(SUB) - backend(PUSH) */
@@ -90,25 +112,16 @@ INT proxy_thread(void *param) {
 
    zmq_proxy(frontend, backend, NULL);
 
-   printf("Run ZMQ proxy...\n");
 
    return 0;
 }
 
-/*-- Frontend Init -------------------------------------------------*/
+/* DATA equipment init */
 
-INT frontend_init()
-{
-   int feindex = get_frontend_index();
-
-   printf("\n");
-   if(feindex == -1) {
-      printf("E: please specify frontend index\n");
-      cm_disconnect_experiment();
-      exit(-1);
-   }
+void equip_data_init(void) {
 
    /* create ZMQ proxy thread */
+   printf("Create ZMQ proxy thread...\n");
    ss_thread_create(proxy_thread, NULL);
 
    for (int i=0; i<NUM_THREADS; i++) {
@@ -121,9 +134,40 @@ INT frontend_init()
       /* create readout thread */
       ss_thread_create(trigger_thread, &pdata[i]);
    }
+}
+
+/* DATA equipment begin_of_run */
+
+void equip_data_begin_of_run(void) {
+   
+   // read from ODB...
+   nmod = 8;
+   nsam = 5;
+   //
+}
+
+/* CTRL equipment init */
+
+void equip_ctrl_init(void) {
+
+}
+
+/* CTRL equipment begin of run */
+
+void equip_ctrl_begin_of_run(void) {
+
+}
+
+/*-- Frontend Init -------------------------------------------------*/
+
+INT frontend_init() {
+
+   equip_data_init();
 
    set_equipment_status(equipment[0].name, "Initialized", "#ffff00");
-   if(run_state == STATE_RUNNING)
+   set_equipment_status(equipment[1].name, "Running", "#00ff00");
+
+   if(run_state == STATE_RUNNING) 
       set_equipment_status(equipment[0].name, "Started run", "#00ff00");
 
    return SUCCESS;
@@ -131,8 +175,8 @@ INT frontend_init()
 
 /*-- Frontend Exit -------------------------------------------------*/
 
-INT frontend_exit()
-{
+INT frontend_exit() {
+
    stop_readout_threads();
 
    return SUCCESS;
@@ -140,13 +184,10 @@ INT frontend_exit()
 
 /*-- Begin of Run --------------------------------------------------*/
 
-INT begin_of_run(INT run_number, char *error)
-{
-   // read from ODB...
-   nmod = 8;
-   nsam = 5;
-   //
-      
+INT begin_of_run(INT run_number, char *error) {
+
+   equip_data_begin_of_run();
+
    set_equipment_status(equipment[0].name, "Started run", "#00ff00");
 
    return SUCCESS;
@@ -154,8 +195,8 @@ INT begin_of_run(INT run_number, char *error)
 
 /*-- End of Run ----------------------------------------------------*/
 
-INT end_of_run(INT run_number, char *error)
-{
+INT end_of_run(INT run_number, char *error) {
+
    set_equipment_status(equipment[0].name, "Ended run", "#00ff00");
 
    return SUCCESS;
@@ -163,8 +204,8 @@ INT end_of_run(INT run_number, char *error)
 
 /*-- Pause Run -----------------------------------------------------*/
 
-INT pause_run(INT run_number, char *error)
-{
+INT pause_run(INT run_number, char *error) {
+
    set_equipment_status(equipment[0].name, "Paused run", "#ffff00");
 
    return SUCCESS;
@@ -172,8 +213,8 @@ INT pause_run(INT run_number, char *error)
 
 /*-- Resume Run ----------------------------------------------------*/
 
-INT resume_run(INT run_number, char *error)
-{
+INT resume_run(INT run_number, char *error) {
+
    set_equipment_status(equipment[0].name, "Started run", "#00ff00");
 
    return SUCCESS;
@@ -181,8 +222,8 @@ INT resume_run(INT run_number, char *error)
 
 /*-- Frontend Loop -------------------------------------------------*/
 
-INT frontend_loop()
-{
+INT frontend_loop() {
+
    /* if frontend_call_loop is true, this routine gets called when
       the frontend is idle or once between every event */
    return SUCCESS;
@@ -190,24 +231,24 @@ INT frontend_loop()
 
 /*-- Trigger event routines ----------------------------------------*/
 
-INT poll_event(INT source, INT count, BOOL test)
-/* Polling is not used */
-{
+INT poll_event(INT source, INT count, BOOL test) {
+
+   /* Polling is not used */
    return 0;
 }
 
 /*-- Interrupt configuration ---------------------------------------*/
 
-INT interrupt_configure(INT cmd, INT source, POINTER_T adr)
-/* Interrupts are not used */
-{
+INT interrupt_configure(INT cmd, INT source, POINTER_T adr) {
+
+   /* Interrupts are not used */
    return SUCCESS;
 }
 
 /*-- Event readout -------------------------------------------------*/
 
-INT trigger_thread(void *param)
-{
+INT trigger_thread(void *param) {
+
    EVENT_HEADER *pevent;
    WORD *pdata, *pmegamp;
    int  index, status;
@@ -229,7 +270,6 @@ INT trigger_thread(void *param)
    
    /* Obtain ring buffer for inter-thread data exchange */
    rbh = get_event_rbh(index);
-   printf("Thread %d - rbh = %d\n", index, rbh);
 
    while (is_readout_thread_enabled()) {
 
@@ -304,6 +344,18 @@ INT trigger_thread(void *param)
    signal_readout_thread_active(index, FALSE);
    
    printf("Stop readout thread %d\n", index);
+
+   return 0;
+}
+
+INT handle_runcontrol(char *pevent, INT off) {
+
+   printf("%d\n", GetRegAddress(SETTINGS_TREE + "Number of samples per channel"));
+
+   auto rlist = GetRegs(SCAN);
+
+   for(auto i=rlist.begin(); i != rlist.end(); i++)
+      printf("%s\n", (*i).label.c_str());
 
    return 0;
 }
