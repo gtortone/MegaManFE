@@ -6,8 +6,8 @@ __pycache__/
 # C extensions
 *.so
 *.o
-frontend/cxx/femegaman
-proxy/cxx/feproxy
+frontend/femegaman
+proxy/feproxy
 
 # Distribution / packaging
 .Python
