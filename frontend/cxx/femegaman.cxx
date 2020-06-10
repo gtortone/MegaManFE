@@ -1,11 +1,9 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <zmq.hpp>
-#include <iostream>
-#include <sstream>
 #include <valarray>
 
 #include "midas.h"
+#include "odbxx.h"
 #include "msystem.h"
 #include "mfe.h"
 #include "evutils.h"
@@ -51,6 +49,8 @@ struct _pdata pdata[NUM_THREADS];
 
 zmq::context_t context(1);
 
+midas::odb o;
+
 /*-- Function declarations -----------------------------------------*/
 
 INT proxy_thread(void *);
@@ -89,7 +89,7 @@ EQUIPMENT equipment[] = {
          "MIDAS",                /* format */
          TRUE,                   /* enabled */
          RO_ALWAYS,              /* read always */
-         200,                   /* poll for 2000ms */
+         2000,                   /* poll for 2000ms */
          0,                      /* stop run after this event limit */
          0,                      /* number of sub events */
          1,                      /* log history */
@@ -149,7 +149,21 @@ void equip_data_begin_of_run(void) {
 /* CTRL equipment init */
 
 void equip_ctrl_init(void) {
+   
+   std::string odb_base = std::string("/Equipment/") + std::string(equipment[1].name);
 
+   o.connect(odb_base);
+
+   // initialize ODB
+   auto rlist = GetRegs();
+   for(auto i=rlist.begin(); i != rlist.end(); i++)
+      o[(*i).subtree][(*i).label] = 0;
+   
+   // read FPGA registers with SOF flag - write to ODB
+   auto soflist = GetRegs(SOF);
+   for(auto i=soflist.begin(); i != soflist.end(); i++) {
+
+   }
 }
 
 /* CTRL equipment begin of run */
@@ -162,10 +176,11 @@ void equip_ctrl_begin_of_run(void) {
 
 INT frontend_init() {
 
-   equip_data_init();
-
    set_equipment_status(equipment[0].name, "Initialized", "#ffff00");
    set_equipment_status(equipment[1].name, "Running", "#00ff00");
+
+   equip_ctrl_init();
+   equip_data_init();
 
    if(run_state == STATE_RUNNING) 
       set_equipment_status(equipment[0].name, "Started run", "#00ff00");
@@ -186,6 +201,7 @@ INT frontend_exit() {
 
 INT begin_of_run(INT run_number, char *error) {
 
+   equip_ctrl_begin_of_run();
    equip_data_begin_of_run();
 
    set_equipment_status(equipment[0].name, "Started run", "#00ff00");
@@ -350,12 +366,7 @@ INT trigger_thread(void *param) {
 
 INT handle_runcontrol(char *pevent, INT off) {
 
-   printf("%d\n", GetRegAddress(SETTINGS_TREE + "Number of samples per channel"));
-
-   auto rlist = GetRegs(SCAN);
-
-   for(auto i=rlist.begin(); i != rlist.end(); i++)
-      printf("%s\n", (*i).label.c_str());
+   std::cout << o.print() << std::endl;
 
    return 0;
 }

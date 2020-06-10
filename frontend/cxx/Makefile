@@ -13,7 +13,7 @@ CXX = g++
 OSFLAGS = -DOS_LINUX -Dextname
 CFLAGS = -O2 -Wall -I$(INC_DIR) 
 LIB = $(LIB_DIR)/libmidas.a
-LIBS = -lm -lz -lutil -lpthread -lrt -lzmq
+LIBS = -lm -lz -lutil -lpthread -lrt -lzmq -ldl
 
 UFE = femegaman
 
