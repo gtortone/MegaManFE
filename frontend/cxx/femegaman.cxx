@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <zmq.hpp>
+#include <xmlrpc-c/girerr.hpp>
+#include <iostream>
 #include <valarray>
+#include <exception>
 
 #include "midas.h"
 #include "odbxx.h"
@@ -8,6 +11,7 @@
 #include "mfe.h"
 #include "evutils.h"
 #include "register.h"
+#include "rcclient.h"
 
 //#define DEBUG
 
@@ -50,6 +54,7 @@ struct _pdata pdata[NUM_THREADS];
 zmq::context_t context(1);
 
 midas::odb o;
+RuncontrolClient rc("http://lxconga01.na.infn.it:4242/RPC2");
 
 /*-- Function declarations -----------------------------------------*/
 
@@ -112,7 +117,6 @@ INT proxy_thread(void *param) {
 
    zmq_proxy(frontend, backend, NULL);
 
-
    return 0;
 }
 
@@ -142,8 +146,7 @@ void equip_data_begin_of_run(void) {
    
    // read from ODB...
    nmod = 8;
-   nsam = 5;
-   //
+   nsam = o["Settings"]["Number of samples per channel"];
 }
 
 /* CTRL equipment init */
@@ -162,14 +165,31 @@ void equip_ctrl_init(void) {
    // read FPGA registers with SOF flag - write to ODB
    auto soflist = GetRegs(SOF);
    for(auto i=soflist.begin(); i != soflist.end(); i++) {
-
+      try {
+         int value = rc.readReg((*i).addr);
+         o[(*i).subtree][(*i).label] = value;
+      } catch (girerr::error &e) {
+         cm_msg(MERROR, "rc", "Run Control RPC error");
+      } 
    }
+
+   // update number of samples per channel
+   nsam = o["Settings"]["Number of samples per channel"];
 }
 
 /* CTRL equipment begin of run */
 
 void equip_ctrl_begin_of_run(void) {
 
+   // read from ODB - write to FPGA registers with BOR
+   auto borlist = GetRegs(BOR);
+   for(auto i=borlist.begin(); i != borlist.end(); i++) {
+      try {
+         rc.writeReg((*i).addr, o[(*i).subtree][(*i).label]);
+      } catch (girerr::error &e) {
+         cm_msg(MERROR, "rc", "Run Control RPC error");
+      }
+   }
 }
 
 /*-- Frontend Init -------------------------------------------------*/
@@ -348,6 +368,7 @@ INT trigger_thread(void *param) {
             /* send event to ring buffer */
             rb_increment_wp(rbh, sizeof(EVENT_HEADER) + pevent->data_size);
          }
+
       } else {
          
          // sleep to relax CPU usage
@@ -366,7 +387,32 @@ INT trigger_thread(void *param) {
 
 INT handle_runcontrol(char *pevent, INT off) {
 
-   std::cout << o.print() << std::endl;
+   // read FPGA registers with SCAN flag - write to ODB
+   auto scanlist = GetRegs(SCAN);
+   for(auto i=scanlist.begin(); i != scanlist.end(); i++) {
+      try {
+         int value = rc.readReg((*i).addr);
+         o[(*i).subtree][(*i).label] = value;
+      } catch (girerr::error &e) {
+         cm_msg(MERROR, "rc", "Run Control RPC error");
+      }
+   }
+
+   // check SCLR registers: if value is 1 set again to 0
+   // and set FPGA register (only when frontend is running)
+   auto sclrlist = GetRegs(SCLR);
+   for(auto i=sclrlist.begin(); i != sclrlist.end(); i++) {
+      if(o[(*i).subtree][(*i).label] != 0) {
+         if (run_state != STATE_RUNNING) {
+            auto addr = GetRegAddress((*i).label);
+            rc.writeReg(addr, 1);
+            rc.writeReg(addr, 0);
+         } else {
+            cm_msg(MERROR, "rc", "Register not available in running mode");
+         }
+      }
+      o[(*i).subtree][(*i).label] = 0;
+   }
 
    return 0;
 }

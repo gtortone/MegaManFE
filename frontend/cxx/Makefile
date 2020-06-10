@@ -14,13 +14,14 @@ OSFLAGS = -DOS_LINUX -Dextname
 CFLAGS = -O2 -Wall -I$(INC_DIR) 
 LIB = $(LIB_DIR)/libmidas.a
 LIBS = -lm -lz -lutil -lpthread -lrt -lzmq -ldl
+LIBS += -lxmlrpc_client++ -lxmlrpc++ -lxmlrpc_util++
 
 UFE = femegaman
 
 all: $(UFE)
 
-$(UFE): $(LIB) $(LIB_DIR)/mfe.o $(UFE).o evutils.o register.o
-	$(CXX) $(CFLAGS) $(OSFLAGS) -o $(UFE) $(UFE).o $(LIB_DIR)/mfe.o evutils.o register.o $(LIB) $(LIBS)
+$(UFE): $(LIB) $(LIB_DIR)/mfe.o $(UFE).o evutils.o register.o rcclient.o
+	$(CXX) $(CFLAGS) $(OSFLAGS) -o $(UFE) $(UFE).o $(LIB_DIR)/mfe.o evutils.o register.o rcclient.o $(LIB) $(LIBS)
 	strip $(UFE)
 
 %.o: %.cxx
