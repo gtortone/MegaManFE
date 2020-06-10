@@ -1,4 +1,5 @@
 #include "evutils.h"
+#include <stdint.h>
 
 unsigned short int GetEC(RawEvent &event) {
    return(UnmaskEC(event[1]));
@@ -40,11 +41,33 @@ unsigned short int UnmaskCRC(unsigned short int word) {
    return (word & 0x00FF);
 }
 
-bool CheckEC(RawEvent &event) {
+bool CheckEC(RawEvent &event, unsigned short ns) {
+   uint16_t i = 1;
+   uint16_t readec = UnmaskEC(event[i]);
+   int step = 2 + 32 + (32 * ns);
+   while (i < event.size()) {
+      if(UnmaskEC(event[i]) != readec) {
+         return false;
+      }
+      i += step;
+   }
+   return true;
 }
 
 bool CheckLEN(RawEvent &event) {
+   uint16_t evlen = GetLEN(event);
+   int length = event.size() + 1;
+   return (evlen == length);
 }
 
 bool CheckCRC(RawEvent &event) {
+   uint16_t evcrc = GetCRC(event);
+   int crc = 0;
+   for(uint16_t  i=0; i<event.size()-1; i++) {
+      uint8_t msb = (event[i] & 0xFF00) >> 8;
+      uint8_t lsb = (event[i] & 0x00FF);
+      crc = (crc ^ (msb ^ lsb));
+   }
+   uint8_t crc8 = crc & 0x00FF;
+   return (evcrc == crc8);
 }

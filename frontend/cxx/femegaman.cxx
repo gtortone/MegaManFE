@@ -45,6 +45,8 @@ unsigned short int nsam = 5;
 
 #define NUM_THREADS	4
 
+MUTEX_T *odbmutex = NULL;
+
 struct _pdata {
    int index;
 };
@@ -53,7 +55,11 @@ struct _pdata pdata[NUM_THREADS];
 
 zmq::context_t context(1);
 
-midas::odb o;
+// ODB for control
+midas::odb oc;
+// ODB for data
+midas::odb od;
+
 RuncontrolClient rc("http://lxconga01.na.infn.it:4242/RPC2");
 
 /*-- Function declarations -----------------------------------------*/
@@ -127,6 +133,16 @@ void equip_data_init(void) {
    /* create ZMQ proxy thread */
    printf("Create ZMQ proxy thread...\n");
    ss_thread_create(proxy_thread, NULL);
+   
+   std::string odb_base = std::string("/Equipment/") + std::string(equipment[0].name);
+
+   od.connect(odb_base);
+   od["Variables"]["Events too short"] = 0;
+   od["Variables"]["Events with EC mismatch"] = 0;
+   od["Variables"]["Events with CRC error"] = 0;
+   od["Variables"]["Events with LEN error"] = 0;
+
+   ss_mutex_create(&odbmutex, false);
 
    for (int i=0; i<NUM_THREADS; i++) {
       
@@ -138,7 +154,8 @@ void equip_data_init(void) {
       /* create readout thread */
       ss_thread_create(trigger_thread, &pdata[i]);
    }
-}
+
+ }
 
 /* DATA equipment begin_of_run */
 
@@ -146,7 +163,13 @@ void equip_data_begin_of_run(void) {
    
    // read from ODB...
    nmod = 8;
-   nsam = o["Settings"]["Number of samples per channel"];
+   nsam = oc["Settings"]["Number of samples per channel"];
+
+   // reset event statistics
+   od["Variables"]["Events too short"] = 0;
+   od["Variables"]["Events with EC mismatch"] = 0;
+   od["Variables"]["Events with CRC error"] = 0;
+   od["Variables"]["Events with LEN error"] = 0;
 }
 
 /* CTRL equipment init */
@@ -155,26 +178,26 @@ void equip_ctrl_init(void) {
    
    std::string odb_base = std::string("/Equipment/") + std::string(equipment[1].name);
 
-   o.connect(odb_base);
+   oc.connect(odb_base);
 
    // initialize ODB
    auto rlist = GetRegs();
-   for(auto i=rlist.begin(); i != rlist.end(); i++)
-      o[(*i).subtree][(*i).label] = 0;
+   for(auto r: rlist)
+      oc[r.subtree][r.label] = 0;
    
    // read FPGA registers with SOF flag - write to ODB
    auto soflist = GetRegs(SOF);
-   for(auto i=soflist.begin(); i != soflist.end(); i++) {
+   for(auto r: soflist) {
       try {
-         int value = rc.readReg((*i).addr);
-         o[(*i).subtree][(*i).label] = value;
+         int value = rc.readReg(r.addr);
+         oc[r.subtree][r.label] = value;
       } catch (girerr::error &e) {
          cm_msg(MERROR, "rc", "Run Control RPC error");
       } 
    }
 
    // update number of samples per channel
-   nsam = o["Settings"]["Number of samples per channel"];
+   nsam = oc["Settings"]["Number of samples per channel"];
 }
 
 /* CTRL equipment begin of run */
@@ -183,13 +206,17 @@ void equip_ctrl_begin_of_run(void) {
 
    // read from ODB - write to FPGA registers with BOR
    auto borlist = GetRegs(BOR);
-   for(auto i=borlist.begin(); i != borlist.end(); i++) {
+   for(auto r: borlist) {
       try {
-         rc.writeReg((*i).addr, o[(*i).subtree][(*i).label]);
+         rc.writeReg(r.addr, oc[r.subtree][r.label]);
       } catch (girerr::error &e) {
          cm_msg(MERROR, "rc", "Run Control RPC error");
       }
    }
+
+   // commit registers
+   for(auto r: GetCommitRegs())
+      rc.writeReg(r.addr, 1);
 }
 
 /*-- Frontend Init -------------------------------------------------*/
@@ -335,6 +362,27 @@ INT trigger_thread(void *param) {
             RawEvent event_raw(reinterpret_cast<unsigned short int*>(message.data()), message.size()/2);
 
             // check event: size too short, EC mismatch, LEN error, CRC error
+            if(event_raw.size() < 3) {
+               ss_mutex_wait_for(odbmutex, 0);
+                  od["Variables"]["Events too short"] += 1;
+               ss_mutex_release(odbmutex);
+               continue;
+            } else if(!CheckEC(event_raw, nsam)) {
+               ss_mutex_wait_for(odbmutex, 0);
+                  od["Variables"]["Events with EC mismatch"] += 1;
+               ss_mutex_release(odbmutex);
+               continue;
+            } else if(!CheckCRC(event_raw)) {
+               ss_mutex_wait_for(odbmutex, 0);
+                  od["Variables"]["Events with CRC error"] += 1;
+               ss_mutex_release(odbmutex);
+               continue;
+            } else if(!CheckLEN(event_raw)) {
+               ss_mutex_wait_for(odbmutex, 0);
+                  od["Variables"]["Events with LEN error"] += 1;
+               ss_mutex_release(odbmutex);
+               continue;
+            }
 
             bm_compose_event(pevent, 1, 0, 0, equipment[0].serial_number++);
             pdata = (WORD *)(pevent + 1);
@@ -389,10 +437,10 @@ INT handle_runcontrol(char *pevent, INT off) {
 
    // read FPGA registers with SCAN flag - write to ODB
    auto scanlist = GetRegs(SCAN);
-   for(auto i=scanlist.begin(); i != scanlist.end(); i++) {
+   for(auto r: scanlist) {
       try {
-         int value = rc.readReg((*i).addr);
-         o[(*i).subtree][(*i).label] = value;
+         int value = rc.readReg(r.addr);
+         oc[r.subtree][r.label] = value;
       } catch (girerr::error &e) {
          cm_msg(MERROR, "rc", "Run Control RPC error");
       }
@@ -401,17 +449,17 @@ INT handle_runcontrol(char *pevent, INT off) {
    // check SCLR registers: if value is 1 set again to 0
    // and set FPGA register (only when frontend is running)
    auto sclrlist = GetRegs(SCLR);
-   for(auto i=sclrlist.begin(); i != sclrlist.end(); i++) {
-      if(o[(*i).subtree][(*i).label] != 0) {
+   for(auto r: sclrlist) {
+      if(oc[r.subtree][r.label] != 0) {
          if (run_state != STATE_RUNNING) {
-            auto addr = GetRegAddress((*i).label);
+            auto addr = GetRegAddress(r.label);
             rc.writeReg(addr, 1);
             rc.writeReg(addr, 0);
          } else {
             cm_msg(MERROR, "rc", "Register not available in running mode");
          }
       }
-      o[(*i).subtree][(*i).label] = 0;
+      oc[r.subtree][r.label] = 0;
    }
 
    return 0;

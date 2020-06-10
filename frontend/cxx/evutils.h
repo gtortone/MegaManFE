@@ -6,18 +6,18 @@
 
 typedef std::valarray<unsigned short int> RawEvent;
 
-unsigned short int GetEC(RawEvent &event);
-unsigned short int GetLEN(RawEvent &event);
-unsigned short int GetCRC(RawEvent &event);
-std::vector<unsigned short int> GetChannelSamples(RawEvent &ev, unsigned short int m, unsigned short int ch, unsigned short ns);
+unsigned short int GetEC(RawEvent &);
+unsigned short int GetLEN(RawEvent &);
+unsigned short int GetCRC(RawEvent &);
+std::vector<unsigned short int> GetChannelSamples(RawEvent &, unsigned short int, unsigned short int, unsigned short);
 unsigned int GetTime(RawEvent &event);
 
-unsigned short int UnmaskEC(unsigned short int word);
-unsigned short int UnmaskLEN(unsigned short int word);
-unsigned short int UnmaskCRC(unsigned short int word);
+unsigned short int UnmaskEC(unsigned short int);
+unsigned short int UnmaskLEN(unsigned short int);
+unsigned short int UnmaskCRC(unsigned short int);
 
-bool CheckEC(RawEvent &event);
-bool CheckLEN(RawEvent &event);
-bool CheckCRC(RawEvent &event);
+bool CheckEC(RawEvent &, unsigned short);
+bool CheckLEN(RawEvent &);
+bool CheckCRC(RawEvent &);
 
 #endif

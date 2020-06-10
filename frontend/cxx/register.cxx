@@ -33,9 +33,9 @@ std::vector<Register> cmdregs = {
 
 uint16_t GetRegAddress(std::string lbl) {
    
-   for(auto i=regs.begin(); i != regs.end(); i++) {
-      if( (*i).label.compare(lbl) == 0 )
-         return (*i).addr;
+   for(auto r: regs) {
+      if( r.label.compare(lbl) == 0 )
+         return r.addr;
    }
 
    return -1; 
@@ -45,9 +45,9 @@ std::vector<Register> GetRegs(const uint8_t flag) {
 
    std::vector<Register> matches;
 
-   for(auto i=regs.begin(); i != regs.end(); i++) {
-      if( ((*i).flags & flag) == flag )
-         matches.push_back(*i);
+   for(auto r: regs) {
+      if( (r.flags & flag) == flag )
+         matches.push_back(r);
    }
 
    return(matches);
