@@ -60,7 +60,10 @@ midas::odb oc;
 // ODB for data
 midas::odb od;
 
-RuncontrolClient rc("http://lxconga01.na.infn.it:4242/RPC2");
+// MegaMan proxy hostname
+std::string proxy_host;
+
+RuncontrolClient rc;
 
 /*-- Function declarations -----------------------------------------*/
 
@@ -115,7 +118,7 @@ EQUIPMENT equipment[] = {
 INT proxy_thread(void *param) {
 
    zmq::socket_t frontend(context, zmq::socket_type::sub);
-   frontend.connect("tcp://lxconga01.na.infn.it:5000");
+   frontend.connect("tcp://" + proxy_host + ":5000");
    frontend.setsockopt(ZMQ_SUBSCRIBE, "", 0);
 
    zmq::socket_t backend(context, zmq::socket_type::push);
@@ -222,6 +225,16 @@ void equip_ctrl_begin_of_run(void) {
 /*-- Frontend Init -------------------------------------------------*/
 
 INT frontend_init() {
+
+   const char *ph = std::getenv("MEGAMAN_PROXY_HOST"); 
+
+   if(ph == NULL) {
+      printf("\nE: please set MEGAMAN_PROXY_HOST environment variable\n");
+      exit(-1);
+   }
+
+   proxy_host = ph;
+   rc.setHost(proxy_host);
 
    set_equipment_status(equipment[0].name, "Initialized", "#ffff00");
    set_equipment_status(equipment[1].name, "Running", "#00ff00");

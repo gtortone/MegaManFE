@@ -10,9 +10,11 @@ class RuncontrolClient {
 
    public:
       RuncontrolClient(std::string url) : serverUrl(url) {}
+      RuncontrolClient(void) {};
 
-      uint16_t readReg(uint16_t addr);
-      void writeReg(uint16_t addr, uint16_t value);
+      void setHost(std::string);
+      uint16_t readReg(uint16_t);
+      void writeReg(uint16_t, uint16_t);
 };
 
 #endif

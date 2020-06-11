@@ -5,6 +5,11 @@
 
 #include "rcclient.h"
 
+void RuncontrolClient::setHost(std::string hostname) {
+
+   serverUrl = "http://" + hostname + ":4242/RPC2";
+}
+
 uint16_t RuncontrolClient::readReg(uint16_t addr) {
 
    std::string methodName("readreg");
