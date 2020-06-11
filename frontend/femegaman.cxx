@@ -233,8 +233,9 @@ INT frontend_init() {
    const char *ph = std::getenv("MEGAMAN_PROXY_HOST"); 
 
    if(ph == NULL) {
+      cm_msg(MERROR, "fe", "please set MEGAMAN_PROXY_HOST environment variable");
       printf("\nE: please set MEGAMAN_PROXY_HOST environment variable\n");
-      exit(-1);
+      return FE_ERR_HW;
    }
 
    proxy_host = ph;
