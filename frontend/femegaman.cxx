@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <zmq.hpp>
 #include <xmlrpc-c/girerr.hpp>
+#include <xmlrpc-c/client_transport.hpp>
+#include <xmlrpc-c/client.hpp>
 #include <iostream>
 #include <valarray>
 #include <exception>
+#include <map>
 
 #include "midas.h"
 #include "odbxx.h"
@@ -12,6 +15,7 @@
 #include "evutils.h"
 #include "register.h"
 #include "rcclient.h"
+#include "rpcutils.h"
 
 //#define DEBUG
 
@@ -235,6 +239,18 @@ INT frontend_init() {
 
    proxy_host = ph;
    rc.setHost(proxy_host);
+
+   // check if MegaMan proxy is running...
+   if (getProxyStatus(proxy_host) != "RUNNING") {
+      cm_msg(MINFO, "fe", "megaman-usb-proxy is not running - restarting in progress...");
+      sendProxyStart(proxy_host);
+      if (getProxyStatus(proxy_host) != "RUNNING") {
+         cm_msg(MERROR, "fe", "megaman-usb-proxy failed restart");
+         return FE_ERR_HW;
+      } else {
+         cm_msg(MINFO, "fe", "megaman-usb-proxy restarted successfully");
+      }
+   }
 
    set_equipment_status(equipment[0].name, "Initialized", "#ffff00");
    set_equipment_status(equipment[1].name, "Running", "#00ff00");

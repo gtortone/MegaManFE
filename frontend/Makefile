@@ -20,8 +20,8 @@ UFE = femegaman
 
 all: $(UFE)
 
-$(UFE): $(LIB) $(LIB_DIR)/mfe.o $(UFE).o evutils.o register.o rcclient.o
-	$(CXX) $(CFLAGS) $(OSFLAGS) -o $(UFE) $(UFE).o $(LIB_DIR)/mfe.o evutils.o register.o rcclient.o $(LIB) $(LIBS)
+$(UFE): $(LIB) $(LIB_DIR)/mfe.o $(UFE).o evutils.o register.o rcclient.o rpcutils.o
+	$(CXX) $(CFLAGS) $(OSFLAGS) -o $(UFE) $(UFE).o $(LIB_DIR)/mfe.o evutils.o register.o rcclient.o rpcutils.o $(LIB) $(LIBS)
 	strip $(UFE)
 
 %.o: %.cxx
