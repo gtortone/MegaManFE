@@ -21,7 +21,7 @@ Megamp Manager DAQ software is composed by two parts:
 
 ## FrontEnd USB proxy
 
-![Screenshot](docs/frontend.bmp)
+![Screenshot](docs/proxy.bmp)
 
 FrontEnd USB proxy (feproxy) runs on Congatec board and is composed by:
 
