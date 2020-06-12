@@ -7,7 +7,7 @@
 [MIDAS Event data format](#midas-event-data-format)\
 [Tools to inspect events](#tools-to-inspect-events)\
 [Run control](#run-control)\
-[ODB structure](#odb-structure)
+[ODB structure](#odb-structure)\
 [Startup of frontend](#startup-of-frontend)
 
 ## Introduction
