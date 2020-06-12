@@ -205,14 +205,14 @@ registers with this flag are periodically (2 seconds frequency) read from FPGA a
 
 ## ODB structure
 
-- /Equipment/MegampManager\<index\>-data/Variables
+- **/Equipment/MegampManager\<index\>-data/Variables**
    - Events with EC not consistent
    - Events with CRC error
    - Events with LEN error
    - Events too short
    
-- /Equipment/MegampManager\<index\>-ctrl/Settings/
+- **/Equipment/MegampManager\<index\>-ctrl/Settings**
    - FPGA registers for board hardware setup (registers with SOF/BOR/SCLR flag)
 
-- /Equipment/MegampManager\<index\>-ctrl/Variables/
+- **/Equipment/MegampManager\<index\>-ctrl/Variables**
    - FPGA registers for board monitoring (registers with SCAN flag)
