@@ -21,6 +21,8 @@ Megamp Manager DAQ software is composed by two parts:
 
 ## FrontEnd USB proxy
 
+![Screenshot](docs/frontend.bmp)
+
 FrontEnd USB proxy (feproxy) runs on Congatec board and is composed by:
 
 - RunControl RPC
@@ -67,6 +69,8 @@ USB endpoint involved for Event publisher is:
 USB data are sent on socket when end-of-event word (0xFxxx) is detected 
 
 ## Frontend Megamp Manager
+
+![Screenshot](docs/frontend.bmp)
 
 Frontend Megamp Manager (femegaman) is a MIDAS FrontEnd written in C++ with MIDAS libraries. It runs on a server/workstation equipped with MIDAS libraries.
 
