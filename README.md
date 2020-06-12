@@ -8,6 +8,7 @@
 [Tools to inspect events](#tools-to-inspect-events)\
 [Run control](#run-control)\
 [ODB structure](#odb-structure)
+[Startup of frontend](#startup-of-frontend)
 
 ## Introduction
 
@@ -216,3 +217,23 @@ registers with this flag are periodically (2 seconds frequency) read from FPGA a
 
 - **/Equipment/MegampManager\<index\>-ctrl/Variables**
    - FPGA registers for board monitoring (registers with SCAN flag)
+   
+## Startup of frontend
+
+Start/stop of DAQ processes can be done with MIDAS web interface with *Programs* panel. DAQ process can also be managed by command line with supervisor utility.
+
+To check/start/stop MIDAS processes (mhttpd, mserver) on DAQ server:
+```
+supervisorctl status
+supervisorctl start midas-mhttpd
+supervisorctl start midas-mserver
+supervisorctl stop midas-mhttpd
+supervisorctl stop midas-mserver
+```
+
+To check/start/stop feproxy process on Congatec board:
+```
+supervisorctl status
+supervisorctl start megaman-usb-proxy
+supervisorctl stop megaman-usb-proxy
+```
