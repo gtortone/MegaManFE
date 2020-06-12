@@ -50,14 +50,14 @@ Example: read register 27
 xmlrpc http://lxconga01.na.infn.it:4242/RPC2 readreg i/27
 ```
 
-Example: write register 0 - value 1
+Example: write register 27 - value 3
 ```
 xmlrpc http://lxconga01.na.infn.it:4242/RPC2 writereg i/27 i/3
 ```
 
 ### Event publisher
 
-Event publisher send USB data on ZeroMQ (https://zeromq.org/) publisher socket on TCP port 5000.
+Event publisher sends USB data on ZeroMQ (https://zeromq.org/) publisher socket on TCP port 5000.
 
 USB endpoint involved for Event publisher is:
 
@@ -153,9 +153,9 @@ Bank:M000
 
 ## Tools to inspect events
 
-### dumpevents.py
+### dumpevents
 
-dumpevents.py is a simple tool to capture events from ZeroMQ socket. It displays a raw dump of event in text mode and reports
+dumpevents is a simple tool to capture events from ZeroMQ socket. It displays a raw dump of event in text mode and reports
 error conditions (EC mismatch, length/crc error).
 
 ### mdump
@@ -183,7 +183,7 @@ Dump a single event with decimal data representation (default: hexadecimal)
 
 ## Run Control
 
-Run control is related to FPGA registers of Megamp Manager accessible through Frontend USB proxy and ZeroRPC.
+Run control is related to FPGA registers of Megamp Manager accessible through Frontend USB proxy and XML-RPC.
 
 Each FPGA register has following attributes:
 - label
@@ -191,7 +191,7 @@ Each FPGA register has following attributes:
 - flags
 
 Label attribute contains Midas ODB record name related to this register\
-(e.g. _/Equipment/MegampManager00-ctrl/Settings/Board/DAC offset_)
+(e.g. _/Equipment/MegampManager00-ctrl/Settings/DAC offset_)
 
 Flags are combination of following values:
 - **BOR** (Begin Of Run)\
@@ -205,13 +205,14 @@ registers with this flag are periodically (2 seconds frequency) read from FPGA a
 
 ## ODB structure
 
-- /Equipment/MegampManager\<index\>-data/Counters
+- /Equipment/MegampManager\<index\>-data/Variables
    - Events with EC not consistent
    - Events with CRC error
    - Events with LEN error
    - Events too short
    
-- /Equipment/MegampManager\<index\>-ctrl/Settings/Board
-   - FPGA registers for board hardware setup
+- /Equipment/MegampManager\<index\>-ctrl/Settings/
+   - FPGA registers for board hardware setup (registers with SOF/BOR/SCLR flag)
 
-- 
+- /Equipment/MegampManager\<index\>-ctrl/Variables/
+   - FPGA registers for board monitoring (registers with SCAN flag)
