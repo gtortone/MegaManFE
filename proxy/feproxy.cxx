@@ -206,13 +206,13 @@ int main(void) {
    while( libusb_bulk_transfer(devh, EP_RCRD, data, 4, &len, 250) == 0 )
       ; 
 
-	transfer_daq_in = libusb_alloc_transfer(0);
-	libusb_fill_bulk_transfer(transfer_daq_in, devh, EP_DAQRD, in_buffer, LEN_IN_BUFFER, cb_daq_in, &publisher, USB_TIMEOUT);
+   transfer_daq_in = libusb_alloc_transfer(0);
+   libusb_fill_bulk_transfer(transfer_daq_in, devh, EP_DAQRD, in_buffer, LEN_IN_BUFFER, cb_daq_in, &publisher, USB_TIMEOUT);
 
-	libusb_submit_transfer(transfer_daq_in);
+   libusb_submit_transfer(transfer_daq_in);
 
-	// create USB event thread
-	pthread_create(&tid, NULL, usb_events_thread, NULL);
+   // create USB event thread
+   pthread_create(&tid, NULL, usb_events_thread, NULL);
 
    // initialize run control object
    RChandle.init(&devh);
