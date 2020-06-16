@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdexcept>
 #include <libusb-1.0/libusb.h>
-#include <zmq.h>
+#include <zmq.hpp>
 #include <vector>
 #include <xmlrpc-c/base.hpp>
 #include <xmlrpc-c/registry.hpp>
@@ -29,10 +29,13 @@ uint8_t in_buffer[LEN_IN_BUFFER];
 struct libusb_transfer *transfer_daq_in = NULL;
 libusb_context *ctx = NULL;
 
+zmq::context_t context(1);
+
 bool cancel_done = false;
 
-/* tid for usb thread */
-pthread_t tid;
+/* thread id for usb thread and ZMQ thread */
+pthread_t tid1;
+pthread_t tid2;
 
 RunControl RChandle;
 
@@ -45,11 +48,7 @@ void *usb_events_thread(void *);
 
 void cb_daq_in(struct libusb_transfer *transfer) {
 
-	static std::vector<unsigned short int> chunk;
 	unsigned short int *bufusint;
-	unsigned short int value;
-
-	chunk.reserve(MAX_EVENT_SIZE);
 
 	if(transfer->status == LIBUSB_TRANSFER_TIMED_OUT) {
 
@@ -70,27 +69,8 @@ void cb_daq_in(struct libusb_transfer *transfer) {
 		bufusint = reinterpret_cast<unsigned short int*>(transfer->buffer);
 		long int evlen = ((transfer->actual_length/2 * 2) == transfer->actual_length)?transfer->actual_length/2:transfer->actual_length/2 + 1;
 
-		for (long int i=0; i < evlen; i++) {
-			value = bufusint[i];
-			chunk.push_back(value);
-
-			if((value & 0xF000) == EOE_MASK) {
-            
-				void **publisher = (void **) transfer->user_data;
-				char *blob_data = reinterpret_cast<char *>(chunk.data());
-				long int blob_size = chunk.size() * 2;
-
-				zmq_send(*publisher, blob_data, blob_size, 0);
-
-				chunk.clear();
-			}
-
-		}	// end for
-
-		if(chunk.size() >= MAX_EVENT_SIZE) {
-
-			chunk.clear();
-		}
+      zmq::socket_t *pusher = (zmq::socket_t *) transfer->user_data;
+      pusher->send(bufusint, evlen * 2);
 
 #ifdef DEBUG_MORE
 		unsigned short int *bufusint;
@@ -100,8 +80,10 @@ void cb_daq_in(struct libusb_transfer *transfer) {
 		bufusint = reinterpret_cast<unsigned short int*>(transfer->buffer);
 		buflen = ((tlen/2 * 2) == tlen)?tlen/2:tlen/2 + 1;      
 
+      printf(">>> from USB >>>\n");
 		for(int i=0; i<buflen; i++)
 			printf("%X ", bufusint[i]);
+      printf("\n>>>>>>>>>>>>>>>\n");
 #endif
 
 	}
@@ -122,6 +104,51 @@ void *usb_events_thread(void *arg) {
 		printf("END loop\n");
 #endif
 	}
+
+   return NULL;
+}
+
+void *zmq_publisher_thread(void *arg) {
+
+   zmq::socket_t puller(context, ZMQ_PULL);
+   zmq::socket_t publisher(context, ZMQ_PUB);
+	static std::vector<unsigned short int> chunk;
+	unsigned short int *bufusint;
+	unsigned short int value;
+
+   puller.connect("inproc://buffer");
+   publisher.bind("tcp://0.0.0.0:5000");
+
+   chunk.reserve(MAX_EVENT_SIZE);
+
+   while(1) {
+
+      zmq::message_t message;
+      puller.recv(&message);
+
+		bufusint = reinterpret_cast<unsigned short int*>(message.data());
+      long int buflen = message.size() / 2;
+
+      // search end of event (0xFxxx)
+      for(int i=0; i<buflen; i++) {
+         value = bufusint[i];
+         chunk.push_back(value);
+
+         if((value & 0xF000) == EOE_MASK) {
+
+            char *blob_data = reinterpret_cast<char *>(chunk.data());
+            long int blob_size = chunk.size() * 2;
+
+            publisher.send(blob_data, blob_size);
+
+            chunk.clear();
+         }
+      }  // end for
+
+      if(chunk.size() >= MAX_EVENT_SIZE)
+         chunk.clear();
+
+   }
 
    return NULL;
 }
@@ -170,9 +197,10 @@ public:
 
 int main(void) {
 
-	void *context = zmq_ctx_new();
-   void *publisher = zmq_socket(context, ZMQ_PUB);
-	zmq_bind(publisher, "tcp://0.0.0.0:5000");
+   // pusher: from USB to ZMQ inproc
+   zmq::socket_t pusher(context, ZMQ_PUSH);
+
+   pusher.bind("inproc://buffer");
 
    int r;
 
@@ -207,12 +235,15 @@ int main(void) {
       ; 
 
    transfer_daq_in = libusb_alloc_transfer(0);
-   libusb_fill_bulk_transfer(transfer_daq_in, devh, EP_DAQRD, in_buffer, LEN_IN_BUFFER, cb_daq_in, &publisher, USB_TIMEOUT);
+   libusb_fill_bulk_transfer(transfer_daq_in, devh, EP_DAQRD, in_buffer, LEN_IN_BUFFER, cb_daq_in, &pusher, USB_TIMEOUT);
 
    libusb_submit_transfer(transfer_daq_in);
 
-   // create USB event thread
-   pthread_create(&tid, NULL, usb_events_thread, NULL);
+   // create USB event readout thread
+   pthread_create(&tid1, NULL, usb_events_thread, NULL);
+
+   // create ZMQ publisher thread
+   pthread_create(&tid2, NULL, zmq_publisher_thread, NULL);
 
    // initialize run control object
    RChandle.init(&devh);
