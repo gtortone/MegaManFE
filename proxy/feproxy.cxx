@@ -17,16 +17,18 @@
 #define USB_PRODUCT_ID  0x8613
 #define USB_TIMEOUT		500
 #define EP_DAQRD     	(0x08 | LIBUSB_ENDPOINT_IN)
-#define LEN_IN_BUFFER	1024*8
+#define LEN_IN_BUFFER	512
+#define NUM_IN_BUFFER   8
 
 #define MAX_EVENT_SIZE	16000
 #define SOE_WORD		   0xD000
 #define EOE_MASK		   0xF000
 
 libusb_device_handle *devh = NULL;
-uint8_t in_buffer[LEN_IN_BUFFER];
 
-struct libusb_transfer *transfer_daq_in = NULL;
+unsigned char **in_buffers;
+struct libusb_transfer **transfers;
+
 libusb_context *ctx = NULL;
 
 zmq::context_t context(1);
@@ -48,29 +50,13 @@ void *usb_events_thread(void *);
 
 void cb_daq_in(struct libusb_transfer *transfer) {
 
-	unsigned short int *bufusint;
+   if(transfer->status == LIBUSB_TRANSFER_COMPLETED) {
 
-	if(transfer->status == LIBUSB_TRANSFER_TIMED_OUT) {
-
-      // submit the next transfer
-		libusb_submit_transfer(transfer_daq_in);
-		//printf("E: LIBUSB_TRANSFER_TIMED_OUT\n");
-
-	} else if(transfer->status == LIBUSB_TRANSFER_CANCELLED) {
-
-		cancel_done = true;
-		//printf("E: LIBUSB_TRANSFER_CANCELLED\n");
-   
-	} else if(transfer->status == LIBUSB_TRANSFER_COMPLETED) {
-
-		// submit the next transfer
-		libusb_submit_transfer(transfer_daq_in);
-
-		bufusint = reinterpret_cast<unsigned short int*>(transfer->buffer);
-		long int evlen = ((transfer->actual_length/2 * 2) == transfer->actual_length)?transfer->actual_length/2:transfer->actual_length/2 + 1;
+  		// submit the next transfer
+		libusb_submit_transfer(transfer);
 
       zmq::socket_t *pusher = (zmq::socket_t *) transfer->user_data;
-      pusher->send(bufusint, evlen * 2);
+      pusher->send(transfer->buffer, transfer->actual_length);
 
 #ifdef DEBUG_MORE
 		unsigned short int *bufusint;
@@ -86,6 +72,17 @@ void cb_daq_in(struct libusb_transfer *transfer) {
       printf("\n>>>>>>>>>>>>>>>\n");
 #endif
 
+   } else if(transfer->status == LIBUSB_TRANSFER_TIMED_OUT) {
+
+      // submit the next transfer
+		libusb_submit_transfer(transfer);
+		//printf("E: LIBUSB_TRANSFER_TIMED_OUT\n");
+
+	} else if(transfer->status == LIBUSB_TRANSFER_CANCELLED) {
+
+		cancel_done = true;
+		//printf("E: LIBUSB_TRANSFER_CANCELLED\n");
+   
 	}
 }
 
@@ -234,16 +231,26 @@ int main(void) {
    while( libusb_bulk_transfer(devh, EP_RCRD, data, 4, &len, 250) == 0 )
       ; 
 
-   transfer_daq_in = libusb_alloc_transfer(0);
-   libusb_fill_bulk_transfer(transfer_daq_in, devh, EP_DAQRD, in_buffer, LEN_IN_BUFFER, cb_daq_in, &pusher, USB_TIMEOUT);
+   in_buffers = (unsigned char **) calloc(NUM_IN_BUFFER, sizeof(unsigned char *));
+   transfers = (struct libusb_transfer **) calloc(NUM_IN_BUFFER, sizeof (struct libusb_transfer *));
 
-   libusb_submit_transfer(transfer_daq_in);
+   for(int i=0; i<NUM_IN_BUFFER; i++) {
+
+      in_buffers[i] = (unsigned char *) malloc(LEN_IN_BUFFER);
+      transfers[i] = libusb_alloc_transfer(0);
+      libusb_fill_bulk_transfer(transfers[i], devh, EP_DAQRD, in_buffers[i], LEN_IN_BUFFER, cb_daq_in, &pusher, USB_TIMEOUT);
+      libusb_submit_transfer(transfers[i]);
+   }
 
    // create USB event readout thread
+   const char *name1 = "usb-handler";
    pthread_create(&tid1, NULL, usb_events_thread, NULL);
+   pthread_setname_np(tid1, name1);
 
    // create ZMQ publisher thread
+   const char *name2 = "zmq-handler";
    pthread_create(&tid2, NULL, zmq_publisher_thread, NULL);
+   pthread_setname_np(tid2, name2);
 
    // initialize run control object
    RChandle.init(&devh);
