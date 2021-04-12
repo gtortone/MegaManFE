@@ -113,7 +113,7 @@ Evid:0001- Mask:0000- Serial:639- Time:0x5ed38991
 (Serial): progressive number (provided by MIDAS)\
 (Time): UNIX timestamp (provided by MIDAS)
 
-- Each Megamp board is a bank: M000, M001, ..., M008
+- Each Megamp board is a bank: M000, M001, ..., M007
 
 inside a bank data are organized as follow:
 
@@ -210,7 +210,7 @@ registers with this flag are periodically (2 seconds frequency) read from FPGA a
 
 ## ODB structure
 
-- **/Equipment/MegampManager\<index\>-data/Variables**
+- **/Equipment/MegampManager\<index\>-data/Statistics**
    - Events with EC not consistent
    - Events with CRC error
    - Events with LEN error
