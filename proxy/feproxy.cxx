@@ -15,6 +15,7 @@
 
 #define USB_VENDOR_ID   0x04B4
 #define USB_PRODUCT_ID  0x8613
+#define USB_POSITION    0        // first Cypress on USB devices
 #define USB_TIMEOUT		500
 #define EP_DAQRD     	(0x08 | LIBUSB_ENDPOINT_IN)
 #define LEN_IN_BUFFER	512
@@ -194,6 +195,8 @@ public:
 
 int main(void) {
 
+   struct libusb_device **device_list;
+   struct libusb_device_descriptor desc;
    // pusher: from USB to ZMQ inproc
    zmq::socket_t pusher(context, ZMQ_PUSH);
 
@@ -207,7 +210,21 @@ int main(void) {
 		return(-1);
    }
 
-	devh = libusb_open_device_with_vid_pid(ctx, USB_VENDOR_ID, USB_PRODUCT_ID);
+   int deviceCount = libusb_get_device_list(ctx, &device_list);
+
+   int currpos = 0;
+   for (int i=0; i<deviceCount; i++) {
+      libusb_get_device_descriptor(device_list[i], &desc);
+      if (desc.idVendor == USB_VENDOR_ID && desc.idProduct == USB_PRODUCT_ID) {
+         if (currpos == USB_POSITION) {
+            libusb_open(device_list[i], &devh);
+            break;
+         }
+         currpos++;
+      }
+   }
+
+	//devh = libusb_open_device_with_vid_pid(ctx, USB_VENDOR_ID, USB_PRODUCT_ID);
 	if (!devh) {
 		printf("usb device not found");
 		return(-1);
