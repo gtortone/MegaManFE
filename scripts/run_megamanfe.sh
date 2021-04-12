@@ -1,4 +1,4 @@
 #!/bin/bash
 
-. /opt/midas/setenv.sh
-/opt/MegaManFE/frontend/femegaman 
+. /opt/midas/bin/setenv.sh
+/opt/MegaManFE/frontend/femegaman -i $MIDAS_FRONTEND_INDEX

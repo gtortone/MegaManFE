@@ -81,6 +81,8 @@ void equip_ctrl_begin_of_run(void);
 
 /*-- Equipment list ------------------------------------------------*/
 
+BOOL equipment_common_overwrite = TRUE;
+
 EQUIPMENT equipment[] = {
       {"MegampManager%02d-data",  /* equipment name */
       {  

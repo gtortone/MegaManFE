@@ -14,7 +14,7 @@ OSFLAGS = -DOS_LINUX -Dextname
 CFLAGS = -O2 -Wall -I$(INC_DIR) 
 LIB = $(LIB_DIR)/libmidas.a
 LIBS = -lm -lz -lutil -lpthread -lrt -lzmq -ldl
-LIBS += -lxmlrpc_client++ -lxmlrpc++ -lxmlrpc_util++
+LIBS += -lxmlrpc_client++ -lxmlrpc++ 
 
 UFE = femegaman
 
