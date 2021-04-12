@@ -8,9 +8,11 @@ from xmlrpc.client import ServerProxy
 from array import array
 import lib.evutils
 
-### params
-proxy_host = "lxconga01.na.infn.it"
-###
+try:
+    proxy_host = sys.argv[1]
+except:
+    print("E: specify hostname")
+    sys.exit(-1)
 
 context = zmq.Context()
 socket = context.socket(zmq.SUB)
